@@ -147,6 +147,8 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<void> clearAllDuas() => delete(duas).go();
+
   // GeofenceLocations CRUD Operations
   Future<List<GeofenceLocation>> getAllLocations() =>
       (select(geofenceLocations)..where((t) => t.isActive.equals(true))).get();
@@ -171,6 +173,8 @@ class AppDatabase extends _$AppDatabase {
       batch.insertAll(geofenceLocations, locationsList);
     });
   }
+
+  Future<void> clearAllLocations() => delete(geofenceLocations).go();
 
   // RitualSettings CRUD Operations
   Future<RitualSetting?> getRitualSettings() =>

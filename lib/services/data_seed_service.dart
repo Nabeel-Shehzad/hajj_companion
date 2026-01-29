@@ -5,14 +5,6 @@ import '../database/app_database.dart';
 class DataSeedService {
   final AppDatabase _database;
 
-  // ⚠️ TEST MODE: Set to true for local testing, false for production
-  static const bool isTestMode = true;
-
-  // 🧪 TEST COORDINATES: Change these to your current location for testing
-  // Use Google Maps to get your coordinates (right-click > "What's here?")
-  static const double testBaseLat = 31.5204; // Example: Lahore, Pakistan
-  static const double testBaseLng = 74.3587;
-  
   DataSeedService(this._database);
 
   /// Initialize all ritual data (holy sites and duas)
@@ -24,198 +16,238 @@ class DataSeedService {
     }
   }
 
+  /// Force re-seed data (clears existing and re-seeds)
+  /// Use this when GPS coordinates have been updated
+  Future<void> reseedData() async {
+    // Clear existing data
+    await _database.clearAllLocations();
+    await _database.clearAllDuas();
+
+    // Re-seed with updated coordinates
+    await _seedHolySites();
+    await _seedDuas();
+  }
+
   /// Seed holy site locations with GPS coordinates
   Future<void> _seedHolySites() async {
-    final locations = isTestMode ? _getTestLocations() : _getProductionLocations();
-    await _database.insertMultipleLocations(locations);
-  }
-
-  /// 🧪 TEST LOCATIONS: Small offsets around your current location
-  List<GeofenceLocationsCompanion> _getTestLocations() {
-    return [
-      // Test Location 1 - Your current position (0m offset)
-      GeofenceLocationsCompanion.insert(
-        locationId: 'test_kaaba',
-        nameEn: 'Test: Holy Kaaba',
-        nameAr: 'الكعبة المشرفة (اختبار)',
-        description: 'TEST MODE - Walk here to test',
-        latitude: testBaseLat,
-        longitude: testBaseLng,
-        radiusMeters: 50.0,
-        ritualName: 'general',
-      ),
-
-      // Test Location 2 - 50 meters north
-      GeofenceLocationsCompanion.insert(
-        locationId: 'test_tawaf',
-        nameEn: 'Test: Tawaf Area',
-        nameAr: 'منطقة الطواف (اختبار)',
-        description: 'TEST MODE - Walk 50m north to trigger',
-        latitude: testBaseLat + 0.00045, // ~50m north
-        longitude: testBaseLng,
-        radiusMeters: 40.0,
-        ritualName: 'tawaf',
-      ),
-
-      // Test Location 3 - 50 meters east
-      GeofenceLocationsCompanion.insert(
-        locationId: 'test_maqam',
-        nameEn: 'Test: Maqam Ibrahim',
-        nameAr: 'مقام إبراهيم (اختبار)',
-        description: 'TEST MODE - Walk 50m east to trigger',
-        latitude: testBaseLat,
-        longitude: testBaseLng + 0.00045, // ~50m east
-        radiusMeters: 30.0,
-        ritualName: 'tawaf',
-      ),
-
-      // Test Location 4 - 100 meters south
-      GeofenceLocationsCompanion.insert(
-        locationId: 'test_safa',
-        nameEn: 'Test: Mount Safa',
-        nameAr: 'الصفا (اختبار)',
-        description: 'TEST MODE - Walk 100m south to trigger',
-        latitude: testBaseLat - 0.0009, // ~100m south
-        longitude: testBaseLng,
-        radiusMeters: 40.0,
-        ritualName: 'sai',
-      ),
-
-      // Test Location 5 - 100 meters west
-      GeofenceLocationsCompanion.insert(
-        locationId: 'test_marwah',
-        nameEn: 'Test: Mount Marwah',
-        nameAr: 'المروة (اختبار)',
-        description: 'TEST MODE - Walk 100m west to trigger',
-        latitude: testBaseLat,
-        longitude: testBaseLng - 0.0009, // ~100m west
-        radiusMeters: 40.0,
-        ritualName: 'sai',
-      ),
-    ];
-  }
-
-  /// 🕋 PRODUCTION LOCATIONS: Actual Makkah coordinates
-  List<GeofenceLocationsCompanion> _getProductionLocations() {
-    return [
-      // PRODUCTION: Kaaba - Center point
+    final locations = [
+      // Kaaba - Center point (REAL COORDINATES)
       GeofenceLocationsCompanion.insert(
         locationId: 'kaaba_center',
         nameEn: 'Holy Kaaba',
         nameAr: 'الكعبة المشرفة',
         description: 'The center of the Grand Mosque',
-        latitude: 21.4225,
-        longitude: 39.8262,
+        latitude: 21.4220759,
+        longitude: 39.8275312,
         radiusMeters: 30.0,
         ritualName: 'general',
       ),
 
-      // PRODUCTION: Tawaf Area
+      // Tawaf Area - All close locations use this central point
       GeofenceLocationsCompanion.insert(
         locationId: 'tawaf_area',
         nameEn: 'Tawaf Area',
         nameAr: 'منطقة الطواف',
         description: 'Circumambulation area around the Kaaba',
-        latitude: 21.4225,
-        longitude: 39.8262,
+        latitude: 21.422523,
+        longitude: 39.826368,
         radiusMeters: 100.0,
         ritualName: 'tawaf',
       ),
 
-      // PRODUCTION: Maqam Ibrahim
+      // Maqam Ibrahim - Near Tawaf area
       GeofenceLocationsCompanion.insert(
         locationId: 'maqam_ibrahim',
         nameEn: 'Maqam Ibrahim',
         nameAr: 'مقام إبراهيم',
         description: 'Station of Abraham - Prayer location after Tawaf',
-        latitude: 21.4226,
-        longitude: 39.8264,
+        latitude: 21.422523,
+        longitude: 39.826368,
         radiusMeters: 20.0,
         ritualName: 'tawaf',
       ),
 
-      // PRODUCTION: Zamzam Well
+      // Zamzam Well (REAL COORDINATES)
       GeofenceLocationsCompanion.insert(
         locationId: 'zamzam',
         nameEn: 'Zamzam Well',
         nameAr: 'بئر زمزم',
         description: 'The blessed well of Zamzam water',
-        latitude: 21.4227,
-        longitude: 39.8263,
+        latitude: 21.4225737,
+        longitude: 39.8239522,
         radiusMeters: 30.0,
         ritualName: 'general',
       ),
 
-      // PRODUCTION: Safa - Start of Sa'i
+      // Safa - Start of Sa'i (REAL COORDINATES)
       GeofenceLocationsCompanion.insert(
         locationId: 'safa',
         nameEn: 'Mount Safa',
         nameAr: 'الصفا',
         description: 'Starting point of Sa\'i between Safa and Marwah',
-        latitude: 21.4228,
-        longitude: 39.8265,
+        latitude: 21.4219111,
+        longitude: 39.8274322,
         radiusMeters: 25.0,
         ritualName: 'sai',
       ),
 
-      // PRODUCTION: Marwah - End of Sa'i
+      // Marwah - End of Sa'i (REAL COORDINATES)
       GeofenceLocationsCompanion.insert(
         locationId: 'marwah',
         nameEn: 'Mount Marwah',
         nameAr: 'المروة',
         description: 'Ending point of Sa\'i between Safa and Marwah',
-        latitude: 21.4230,
-        longitude: 39.8280,
+        latitude: 21.4252671,
+        longitude: 39.8271871,
         radiusMeters: 25.0,
         ritualName: 'sai',
       ),
 
-      // PRODUCTION: Green Pillars (Sai Running Section)
+      // Green Pillars (Calculated midpoint between Safa and Marwah)
       GeofenceLocationsCompanion.insert(
         locationId: 'green_pillars',
         nameEn: 'Green Pillars',
         nameAr: 'الميلين الأخضرين',
         description: 'Section where men should run during Sa\'i',
-        latitude: 21.4229,
-        longitude: 39.8272,
+        latitude: 21.4235891,
+        longitude: 39.8273096,
         radiusMeters: 15.0,
         ritualName: 'sai',
       ),
 
-      // PRODUCTION: Multazam - Between Kaaba door and Black Stone
+      // Multazam - Near Tawaf area
       GeofenceLocationsCompanion.insert(
         locationId: 'multazam',
         nameEn: 'Al-Multazam',
         nameAr: 'الملتزم',
         description: 'The area between the door of Kaaba and Black Stone',
-        latitude: 21.4224,
-        longitude: 39.8263,
+        latitude: 21.422523,
+        longitude: 39.826368,
         radiusMeters: 15.0,
         ritualName: 'tawaf',
       ),
 
-      // PRODUCTION: Black Stone
+      // Black Stone - Near Tawaf area
       GeofenceLocationsCompanion.insert(
         locationId: 'black_stone',
         nameEn: 'The Black Stone',
         nameAr: 'الحجر الأسود',
         description: 'Sacred stone where Tawaf begins',
-        latitude: 21.4223,
-        longitude: 39.8261,
+        latitude: 21.422523,
+        longitude: 39.826368,
         radiusMeters: 10.0,
         ritualName: 'tawaf',
       ),
 
-      // PRODUCTION: Hijr Ismail
+      // Hijr Ismail - Near Tawaf area
       GeofenceLocationsCompanion.insert(
         locationId: 'hijr_ismail',
         nameEn: 'Hijr Ismail',
         nameAr: 'حجر إسماعيل',
         description: 'The semi-circular wall adjacent to the Kaaba',
-        latitude: 21.4226,
-        longitude: 39.8260,
+        latitude: 21.422523,
+        longitude: 39.826368,
         radiusMeters: 20.0,
         ritualName: 'tawaf',
+      ),
+
+      // ===== HAJJ-SPECIFIC LOCATIONS =====
+
+      // Mount Arafat - Most important day of Hajj
+      GeofenceLocationsCompanion.insert(
+        locationId: 'arafat',
+        nameEn: 'Mount Arafat',
+        nameAr: 'جبل عرفات',
+        description: 'Plain of Arafat - Standing on the 9th of Dhul Hijjah',
+        latitude: 21.3548849,
+        longitude: 39.984116,
+        radiusMeters: 156.40,
+        ritualName: 'hajj',
+      ),
+
+      // Muzdalifah - Night stay and pebble collection
+      GeofenceLocationsCompanion.insert(
+        locationId: 'muzdalifah',
+        nameEn: 'Muzdalifah',
+        nameAr: 'مزدلفة',
+        description:
+            'Area between Arafat and Mina - Collect pebbles and spend the night',
+        latitude: 21.411029,
+        longitude: 39.909017,
+        radiusMeters: 2000.0, // ~12.25 km² area
+        ritualName: 'hajj',
+      ),
+
+      // Mina - Tent city during Hajj
+      GeofenceLocationsCompanion.insert(
+        locationId: 'mina',
+        nameEn: 'Mina',
+        nameAr: 'منى',
+        description: 'Valley of tents - Stay during days of Hajj',
+        latitude: 21.407998368,
+        longitude: 39.889329776,
+        radiusMeters: 2500.0, // ~20 km² area
+        ritualName: 'hajj',
+      ),
+
+      // Jamarat Bridge - Stone throwing area
+      GeofenceLocationsCompanion.insert(
+        locationId: 'jamarat_bridge',
+        nameEn: 'Jamarat Bridge',
+        nameAr: 'جسر الجمرات',
+        description: 'Multi-level bridge for Rami al-Jamarat ritual',
+        latitude: 21.4215891,
+        longitude: 39.8696411,
+        radiusMeters: 293.88,
+        ritualName: 'hajj',
+      ),
+
+      // Small Jamarat (Jamrat al-Ula)
+      GeofenceLocationsCompanion.insert(
+        locationId: 'jamarat_ula',
+        nameEn: 'Small Jamarat',
+        nameAr: 'الجمرة الصغرى',
+        description: 'First pillar - Jamrat al-Ula',
+        latitude: 21.4202789,
+        longitude: 39.8726206,
+        radiusMeters: 81.91,
+        ritualName: 'hajj',
+      ),
+
+      // Large Jamarat (Jamrat al-Aqaba)
+      GeofenceLocationsCompanion.insert(
+        locationId: 'jamarat_aqaba',
+        nameEn: 'Large Jamarat',
+        nameAr: 'جمرة العقبة',
+        description: 'Third pillar - Jamrat al-Aqaba',
+        latitude: 21.4223547,
+        longitude: 39.8676574,
+        radiusMeters: 62.06,
+        ritualName: 'hajj',
+      ),
+
+      // Cave of Hira
+      GeofenceLocationsCompanion.insert(
+        locationId: 'cave_hira',
+        nameEn: 'Cave of Hira',
+        nameAr: 'غار حراء',
+        description: 'Cave where Prophet Muhammad received first revelation',
+        latitude: 21.4577043,
+        longitude: 39.8584322,
+        radiusMeters: 30.14,
+        ritualName: 'general',
+      ),
+
+      // Jabal al-Nour (Mountain of Light)
+      GeofenceLocationsCompanion.insert(
+        locationId: 'jabal_nour',
+        nameEn: 'Jabal al-Nour',
+        nameAr: 'جبل النور',
+        description: 'Mountain of Light - Contains Cave of Hira',
+        latitude: 21.4577043,
+        longitude: 39.8584322,
+        radiusMeters: 150.56,
+        ritualName: 'general',
       ),
     ];
 
@@ -374,6 +406,164 @@ class DataSeedService {
         transliteration: const Value(
           'Allahumma Zid Hadhal-Baita Tashrīfan Wa Ta\'ziman Wa Takriman Wa Mahabah',
         ),
+        displayOrder: const Value(1),
+      ),
+
+      // ===== HAJJ-SPECIFIC DUAS =====
+
+      // Mount Arafat - Day of Arafat
+      DuasCompanion.insert(
+        locationId: 'arafat',
+        ritualType: 'self',
+        arabicText:
+            'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ',
+        englishTranslation:
+            'There is no deity except Allah, alone without partner. To Him belongs dominion and praise, and He is over all things competent',
+        transliteration: const Value(
+          'La Ilaha Illallahu Wahdahu La Sharika Lah, Lahul-Mulku Wa Lahul-Hamd Wa Huwa Ala Kulli Shay\'in Qadir',
+        ),
+        displayOrder: const Value(1),
+      ),
+      DuasCompanion.insert(
+        locationId: 'arafat',
+        ritualType: 'self',
+        arabicText:
+            'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنَ الْخَيْرِ كُلِّهِ عَاجِلِهِ وَآجِلِهِ',
+        englishTranslation:
+            'O Allah, I ask You for all good, immediate and distant',
+        transliteration: const Value(
+          'Allahumma Inni As\'aluka Minal-Khairi Kullihi Ajilihi Wa Ajilihi',
+        ),
+        displayOrder: const Value(2),
+      ),
+      DuasCompanion.insert(
+        locationId: 'arafat',
+        ritualType: 'proxy',
+        arabicText:
+            'اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ وَعَافِهِ وَاعْفُ عَنْهُ',
+        englishTranslation:
+            'O Allah, forgive them, have mercy on them, grant them wellbeing, and pardon them',
+        transliteration: const Value(
+          'Allahumma Ighfir Lahu Warhamhu Wa Aafihi Wa\'fu Anhu',
+        ),
+        displayOrder: const Value(1),
+      ),
+
+      // Muzdalifah - Night prayers
+      DuasCompanion.insert(
+        locationId: 'muzdalifah',
+        ritualType: 'self',
+        arabicText:
+            'اللَّهُمَّ إِنِّي أَسْأَلُكَ الْهُدَى وَالتُّقَى وَالْعَفَافَ وَالْغِنَى',
+        englishTranslation:
+            'O Allah, I ask You for guidance, piety, chastity, and contentment',
+        transliteration: const Value(
+          'Allahumma Inni As\'alukal-Huda Wat-Tuqa Wal-Afafa Wal-Ghina',
+        ),
+        displayOrder: const Value(1),
+      ),
+      DuasCompanion.insert(
+        locationId: 'muzdalifah',
+        ritualType: 'proxy',
+        arabicText:
+            'رَبَّنَا آتِهِ فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً',
+        englishTranslation:
+            'Our Lord, give them good in this world and good in the Hereafter',
+        transliteration: const Value(
+          'Rabbana Atihi Fid-Dunya Hasanatan Wa Fil-Akhirati Hasanatan',
+        ),
+        displayOrder: const Value(1),
+      ),
+
+      // Mina - Days of Tashreeq
+      DuasCompanion.insert(
+        locationId: 'mina',
+        ritualType: 'self',
+        arabicText:
+            'اللَّهُمَّ اجْعَلْهُ حَجًّا مَبْرُورًا وَذَنْبًا مَغْفُورًا وَسَعْيًا مَشْكُورًا',
+        englishTranslation:
+            'O Allah, make this an accepted Hajj, a forgiven sin, and an appreciated effort',
+        transliteration: const Value(
+          'Allahumma Ij\'alhu Hajjan Mabruran Wa Dhanban Maghfuran Wa Sa\'yan Mashkuran',
+        ),
+        displayOrder: const Value(1),
+      ),
+      DuasCompanion.insert(
+        locationId: 'mina',
+        ritualType: 'proxy',
+        arabicText: 'اللَّهُمَّ تَقَبَّلْ مِنْهُ وَاجْعَلْهُ حَجًّا مَبْرُورًا',
+        englishTranslation:
+            'O Allah, accept from them and make it an accepted Hajj',
+        transliteration: const Value(
+          'Allahumma Taqabbal Minhu Waj\'alhu Hajjan Mabruran',
+        ),
+        displayOrder: const Value(1),
+      ),
+
+      // Jamarat - Stone throwing
+      DuasCompanion.insert(
+        locationId: 'jamarat_ula',
+        ritualType: 'self',
+        arabicText: 'اللَّهُ أَكْبَرُ',
+        englishTranslation: 'Allah is the Greatest',
+        transliteration: const Value('Allahu Akbar'),
+        displayOrder: const Value(1),
+      ),
+      DuasCompanion.insert(
+        locationId: 'jamarat_ula',
+        ritualType: 'self',
+        arabicText:
+            'اللَّهُمَّ اجْعَلْهُ حَجًّا مَبْرُورًا وَذَنْبًا مَغْفُورًا',
+        englishTranslation:
+            'O Allah, make this an accepted Hajj and a forgiven sin',
+        transliteration: const Value(
+          'Allahumma Ij\'alhu Hajjan Mabruran Wa Dhanban Maghfuran',
+        ),
+        displayOrder: const Value(2),
+      ),
+
+      // Large Jamarat
+      DuasCompanion.insert(
+        locationId: 'jamarat_aqaba',
+        ritualType: 'self',
+        arabicText: 'بِسْمِ اللَّهِ وَاللَّهُ أَكْبَرُ رَغْمًا لِلشَّيْطَانِ',
+        englishTranslation:
+            'In the name of Allah, Allah is Greatest, in defiance of Satan',
+        transliteration: const Value(
+          'Bismillahi Wallahu Akbar Raghman Lish-Shaytan',
+        ),
+        displayOrder: const Value(1),
+      ),
+
+      // Cave of Hira
+      DuasCompanion.insert(
+        locationId: 'cave_hira',
+        ritualType: 'self',
+        arabicText: 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ',
+        englishTranslation:
+            'O Allah, send blessings upon Muhammad and the family of Muhammad',
+        transliteration: const Value(
+          'Allahumma Salli Ala Muhammadin Wa Ala Ali Muhammad',
+        ),
+        displayOrder: const Value(1),
+      ),
+      DuasCompanion.insert(
+        locationId: 'cave_hira',
+        ritualType: 'self',
+        arabicText: 'اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ',
+        englishTranslation:
+            'Read in the name of your Lord who created (First revelation)',
+        transliteration: const Value('Iqra Bismi Rabbikal-Ladhi Khalaq'),
+        displayOrder: const Value(2),
+      ),
+
+      // Jabal al-Nour
+      DuasCompanion.insert(
+        locationId: 'jabal_nour',
+        ritualType: 'self',
+        arabicText: 'سُبْحَانَ الَّذِي أَسْرَى بِعَبْدِهِ لَيْلًا',
+        englishTranslation: 'Glory be to He who took His servant by night',
+        transliteration: const Value('Subhanal-Ladhi Asra Bi\'abdihi Layla'),
         displayOrder: const Value(1),
       ),
     ];

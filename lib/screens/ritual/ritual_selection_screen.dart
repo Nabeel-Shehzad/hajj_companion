@@ -13,7 +13,6 @@ class RitualSelectionScreen extends StatefulWidget {
 class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
   final _database = AppDatabase();
   String _ritualType = 'self';
-  String _selectedRitual = 'tawaf';
   RitualSetting? _savedSettings;
 
   @override
@@ -41,12 +40,39 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Ritual Selection'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Ritual Guidance Settings'),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Info Card
+            Card(
+              color: Colors.blue.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Your location will automatically detect nearby holy sites and display appropriate duas',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
             // Ritual Type Selection
             Card(
               elevation: 4,
@@ -101,70 +127,6 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Ritual Selection
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.mosque,
-                          color: Colors.green.shade700,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Select Ritual',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _buildRitualOption(
-                      'tawaf',
-                      'Tawaf',
-                      'Circumambulation around the Kaaba',
-                      Icons.sync,
-                    ),
-                    const Divider(),
-                    _buildRitualOption(
-                      'sai',
-                      'Sa\'i',
-                      'Walking between Safa and Marwah',
-                      Icons.directions_walk,
-                    ),
-                    const Divider(),
-                    _buildRitualOption(
-                      'arafat',
-                      'Arafat',
-                      'Standing at Mount Arafat',
-                      Icons.landscape,
-                    ),
-                    const Divider(),
-                    _buildRitualOption(
-                      'muzdalifah',
-                      'Muzdalifah',
-                      'Stay at Muzdalifah',
-                      Icons.nightlight_round,
-                    ),
-                    const Divider(),
-                    _buildRitualOption(
-                      'mina',
-                      'Mina',
-                      'Days in Mina and Rami al-Jamarat',
-                      Icons.location_city,
-                    ),
-                  ],
-                ),
-              ),
-            ),
             const SizedBox(height: 32),
 
             // Start Tracking Button
@@ -174,7 +136,7 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                 await _database.saveRitualSettings(
                   RitualSettingsCompanion.insert(
                     ritualType: _ritualType,
-                    selectedRitual: _selectedRitual,
+                    selectedRitual: 'auto', // Auto-detected by GPS
                     audioEnabled: Value(_savedSettings?.audioEnabled ?? true),
                     hapticEnabled: Value(_savedSettings?.hapticEnabled ?? true),
                     audioVolume: Value(_savedSettings?.audioVolume ?? 80),
@@ -187,13 +149,13 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                   MaterialPageRoute(
                     builder: (context) => LocationTrackingScreen(
                       ritualType: _ritualType,
-                      selectedRitual: _selectedRitual,
+                      selectedRitual: 'auto', // GPS determines ritual
                     ),
                   ),
                 );
               },
               icon: const Icon(Icons.navigation, size: 24),
-              label: const Text('Start Location Tracking'),
+              label: const Text('Start GPS Guidance'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 textStyle: const TextStyle(fontSize: 18),
@@ -221,67 +183,6 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRitualOption(
-    String value,
-    String title,
-    String description,
-    IconData icon,
-  ) {
-    final isSelected = _selectedRitual == value;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedRitual = value;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Radio<String>(
-              value: value,
-              groupValue: _selectedRitual,
-              onChanged: (val) {
-                setState(() {
-                  _selectedRitual = val!;
-                });
-              },
-              activeColor: Colors.green,
-            ),
-            Icon(
-              icon,
-              color: isSelected ? Colors.green.shade700 : Colors.grey.shade600,
-              size: 32,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? Colors.green.shade800
-                          : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                  ),
-                ],
               ),
             ),
           ],

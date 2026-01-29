@@ -5,17 +5,25 @@ import '../database/app_database.dart';
 import 'location_service.dart';
 import 'geofence_service.dart';
 
+/// Dua with its location information
+class DuaWithLocation {
+  final Dua dua;
+  final GeofenceLocation location;
+
+  DuaWithLocation({required this.dua, required this.location});
+}
+
 /// Guidance event for UI display
 class GuidanceEvent {
   final GeofenceLocation location;
-  final List<Dua> duas;
+  final List<DuaWithLocation> duasWithLocations;
   final bool audioEnabled;
   final bool hapticsEnabled;
   final DateTime timestamp;
 
   GuidanceEvent({
     required this.location,
-    required this.duas,
+    required this.duasWithLocations,
     required this.audioEnabled,
     required this.hapticsEnabled,
     required this.timestamp,
@@ -63,9 +71,9 @@ class RitualGuidanceService {
       _currentSettings = await _database.getRitualSettings();
     }
 
-    // Start geofence monitoring
+    // Start geofence monitoring - load ALL locations
     final started = await _geofenceService.startMonitoring(
-      ritualName: _getRitualNameFromType(ritualType),
+      ritualName: null, // null = all locations
     );
 
     if (!started) return false;
@@ -85,24 +93,42 @@ class RitualGuidanceService {
 
   /// Handle entering a holy site
   Future<void> _handleLocationEntry(GeofenceEvent event) async {
-    // Get duas for this location and ritual type
-    final duas = await _database.getDuasForLocation(
-      event.location.locationId,
-      _currentSettings?.ritualType ?? 'self',
-    );
+    // Get ALL locations user is currently inside
+    final currentLocationIds = _geofenceService.getCurrentLocations();
 
-    if (duas.isEmpty) return;
+    // Collect duas with their location info from ALL active geofences
+    final allDuasWithLocations = <DuaWithLocation>[];
 
-    // Trigger haptic feedback if enabled
+    for (final locationId in currentLocationIds) {
+      final location = await _database.getLocationById(locationId);
+      if (location != null) {
+        final duas = await _database.getDuasForLocation(
+          locationId,
+          _currentSettings?.ritualType ?? 'self',
+        );
+
+        // Pair each dua with its location
+        for (final dua in duas) {
+          allDuasWithLocations.add(
+            DuaWithLocation(dua: dua, location: location),
+          );
+        }
+      }
+    }
+
+    if (allDuasWithLocations.isEmpty) return;
+
+    // Trigger haptic feedback if enabled (only once)
     if (_currentSettings?.hapticEnabled ?? false) {
       _triggerHapticPattern(event.location.ritualName);
     }
 
-    // Emit guidance event for UI
+    // Emit guidance event with ALL duas from ALL nearby locations
     _guidanceController?.add(
       GuidanceEvent(
-        location: event.location,
-        duas: duas,
+        location: event.location, // Primary location that triggered
+        duasWithLocations:
+            allDuasWithLocations, // All duas with their locations
         audioEnabled: _currentSettings?.audioEnabled ?? false,
         hapticsEnabled: _currentSettings?.hapticEnabled ?? false,
         timestamp: DateTime.now(),
@@ -138,8 +164,9 @@ class RitualGuidanceService {
 
   /// Map ritual type to database ritual name
   String _getRitualNameFromType(String type) {
-    // Can be extended for different ritual phases
-    return 'general'; // Load all locations initially
+    // Return null to load ALL locations regardless of ritual
+    // This allows showing nearby duas for any location
+    return type.toLowerCase(); // Maps 'self' or 'proxy' to ritual names
   }
 
   /// Update ritual settings

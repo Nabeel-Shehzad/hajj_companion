@@ -5,6 +5,7 @@ import '../../database/app_database.dart';
 import '../../services/location_service.dart';
 import '../../services/geofence_service.dart';
 import '../../services/ritual_guidance_service.dart';
+import '../../services/audio_service.dart';
 
 class LocationTrackingScreen extends StatefulWidget {
   final String ritualType;
@@ -25,6 +26,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
   late final LocationService _locationService;
   late final GeofenceService _geofenceService;
   late final RitualGuidanceService _guidanceService;
+  late final AudioService _audioService;
 
   StreamSubscription<GuidanceEvent>? _guidanceSub;
   StreamSubscription<Position>? _positionSub;
@@ -33,8 +35,9 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
   bool _hasPermission = false;
   Position? _currentPosition;
   GeofenceLocation? _currentLocation;
-  List<Dua> _currentDuas = [];
+  List<DuaWithLocation> _currentDuas = [];
   RitualSetting? _settings;
+  String? _currentlyPlayingDuaId;
 
   @override
   void initState() {
@@ -47,6 +50,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
       _locationService,
       _geofenceService,
     );
+    _audioService = AudioService();
     _initTracking();
   }
 
@@ -80,11 +84,8 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
       _guidanceSub = _guidanceService.guidanceEvents.listen((event) {
         setState(() {
           _currentLocation = event.location;
-          _currentDuas = event.duas;
+          _currentDuas = event.duasWithLocations;
         });
-
-        // Show dialog with duas
-        _showDuaDialog(event);
       });
     }
   }
@@ -117,60 +118,59 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
     );
   }
 
-  void _showDuaDialog(GuidanceEvent event) {
-    if (!mounted) return;
+  Widget _buildDuaCard(DuaWithLocation duaWithLocation) {
+    final dua = duaWithLocation.dua;
+    final location = duaWithLocation.location;
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.place, color: Colors.green.shade700),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                event.location.nameEn,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                event.location.nameAr,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ...event.duas.map(_buildDuaCard),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDuaCard(Dua dua) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Location Header
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.place, size: 20, color: Colors.green.shade700),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          location.nameEn,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade900,
+                          ),
+                        ),
+                        Text(
+                          location.nameAr,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade800,
+                          ),
+                          textDirection: TextDirection.rtl,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Arabic Dua Text
             Text(
               dua.arabicText,
               style: const TextStyle(
@@ -182,10 +182,14 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
               textDirection: TextDirection.rtl,
             ),
             const SizedBox(height: 12),
+
+            // English Translation
             Text(
               dua.englishTranslation,
               style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
             ),
+
+            // Transliteration (if available)
             if (dua.transliteration != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -193,6 +197,85 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
               ),
             ],
+
+            const SizedBox(height: 16),
+
+            // Audio Controls
+            Row(
+              children: [
+                // Play Arabic Button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      if (_currentlyPlayingDuaId == '${dua.id}_ar') {
+                        await _audioService.stop();
+                        setState(() => _currentlyPlayingDuaId = null);
+                      } else {
+                        await _audioService.playDua(dua.arabicText);
+                        setState(() => _currentlyPlayingDuaId = '${dua.id}_ar');
+                      }
+                    },
+                    icon: Icon(
+                      _currentlyPlayingDuaId == '${dua.id}_ar'
+                          ? Icons.stop
+                          : Icons.play_arrow,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _currentlyPlayingDuaId == '${dua.id}_ar'
+                          ? 'Stop'
+                          : 'Arabic',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Play Translation Button
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      if (_currentlyPlayingDuaId == '${dua.id}_en') {
+                        await _audioService.stop();
+                        setState(() => _currentlyPlayingDuaId = null);
+                      } else {
+                        await _audioService.playTranslation(
+                          dua.englishTranslation,
+                        );
+                        setState(() => _currentlyPlayingDuaId = '${dua.id}_en');
+                      }
+                    },
+                    icon: Icon(
+                      _currentlyPlayingDuaId == '${dua.id}_en'
+                          ? Icons.stop
+                          : Icons.volume_up,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _currentlyPlayingDuaId == '${dua.id}_en'
+                          ? 'Stop'
+                          : 'English',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.green.shade700,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -206,6 +289,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
     _guidanceService.dispose();
     _geofenceService.dispose();
     _locationService.dispose();
+    _audioService.dispose();
     _database.close();
     super.dispose();
   }

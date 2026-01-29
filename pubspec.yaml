@@ -42,6 +42,9 @@ dependencies:
   # Sensors for wrist-raise gesture detection (FR-03)
   sensors_plus: ^6.0.1
   
+  # Text-to-Speech for dua audio playback
+  flutter_tts: ^4.2.0
+  
   # Firebase
   firebase_core: ^3.8.1
   cloud_firestore: ^5.6.0

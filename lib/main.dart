@@ -63,6 +63,8 @@ class _HajjCompanionAppState extends State<HajjCompanionApp> {
   Future<void> _seedDatabaseIfNeeded() async {
     final database = AppDatabase();
     final seedService = DataSeedService(database);
+
+    // Only seed if database is empty (first install)
     await seedService.seedInitialData();
   }
 
