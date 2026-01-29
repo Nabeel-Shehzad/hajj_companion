@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "984973748142",
+    "project_id": "hajj-companion-app",
+    "storage_bucket": "hajj-companion-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:984973748142:android:9b398791c10b9e06d58a3f",
+        "android_client_info": {
+          "package_name": "com.example.hajj_companion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzgL_SAMVTiZPZ4MdzQWrH6DnWoqmy6No"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

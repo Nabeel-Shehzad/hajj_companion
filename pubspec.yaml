@@ -1,0 +1,62 @@
+name: hajj_companion
+description: "A new Flutter project."
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  
+  # Internationalization
+  intl: ^0.20.2
+  
+  # QR Code generation
+  qr_flutter: ^4.1.0
+  
+  # Location services
+  geolocator: ^10.1.0
+  
+  # Permissions
+  permission_handler: ^11.1.0
+  
+  # Database
+  drift: ^2.14.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.1
+  path: ^1.8.3
+  
+  # Settings storage
+  shared_preferences: ^2.2.2
+  
+  # Encryption
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+  
+  # Sensors for wrist-raise gesture detection (FR-03)
+  sensors_plus: ^6.0.1
+  
+  # Firebase
+  firebase_core: ^3.8.1
+  cloud_firestore: ^5.6.0
+  firebase_auth: ^5.3.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  # Drift code generation
+  drift_dev: ^2.14.0
+  build_runner: ^2.4.7
+
+  flutter_lints: ^6.0.0
+
+flutter:
+
+  uses-material-design: true
