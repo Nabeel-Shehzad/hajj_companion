@@ -49,6 +49,9 @@ dependencies:
   # UUID generation for device IDs and join codes
   uuid: ^4.5.1
   
+  # URL launcher for opening Google Maps
+  url_launcher: ^6.3.1
+  
   # Firebase
   firebase_core: ^3.8.1
   cloud_firestore: ^5.6.0

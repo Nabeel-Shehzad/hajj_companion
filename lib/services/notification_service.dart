@@ -70,6 +70,13 @@ class NotificationService {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
     _isInitialized = true;
+
+    // Get and print FCM token for testing
+    final fcmToken = await getFcmToken();
+    print('================================================================================');
+    print('🔔 FCM TOKEN FOR PUSH NOTIFICATIONS:');
+    print(fcmToken ?? 'No token available');
+    print('================================================================================');
   }
 
   /// Request notification permissions

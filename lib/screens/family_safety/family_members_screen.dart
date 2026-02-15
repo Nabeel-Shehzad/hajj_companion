@@ -7,6 +7,7 @@ import 'package:hajj_companion/services/family_group_service.dart';
 import 'package:hajj_companion/services/location_sharing_service.dart';
 import 'package:hajj_companion/services/location_service.dart';
 import 'package:hajj_companion/services/notification_service.dart';
+import 'package:hajj_companion/services/map_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -189,6 +190,23 @@ class _FamilyMembersScreenState extends State<FamilyMembersScreen> {
           ),
         ],
       ),
+      floatingActionButton: StreamBuilder<List<LocationShare>>(
+        stream: _locationSharingService.streamFamilyLocations(),
+        builder: (context, snapshot) {
+          final locations = (snapshot.data ?? [])
+              .where((loc) => loc.latitude != 0 && loc.longitude != 0)
+              .toList();
+
+          if (locations.isEmpty) return const SizedBox.shrink();
+
+          return FloatingActionButton.extended(
+            onPressed: () => _openAllMembersMap(locations),
+            backgroundColor: Colors.green,
+            icon: const Icon(Icons.map),
+            label: const Text('View All on Map'),
+          );
+        },
+      ),
     );
   }
 
@@ -314,7 +332,27 @@ class _FamilyMembersScreenState extends State<FamilyMembersScreen> {
             ],
           ],
         ),
-        trailing: isBeyondSafeDistance
+        trailing: hasLocation && !isMe
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.directions, color: Colors.blue),
+                    tooltip: 'Get directions',
+                    onPressed: () => _openDirections(location),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.map, color: Colors.green),
+                    tooltip: 'View on map',
+                    onPressed: () => _openMemberLocation(location),
+                  ),
+                  if (isBeyondSafeDistance)
+                    const Icon(Icons.warning, color: Colors.red)
+                  else if (!isStale)
+                    const Icon(Icons.location_on, color: Colors.green),
+                ],
+              )
+            : isBeyondSafeDistance
             ? const Icon(Icons.warning, color: Colors.red)
             : hasLocation && !isStale
             ? const Icon(Icons.location_on, color: Colors.green)
@@ -353,6 +391,55 @@ class _FamilyMembersScreenState extends State<FamilyMembersScreen> {
       setState(() => _isSharing = false);
     } else {
       await _startLocationSharing();
+    }
+  }
+
+  Future<void> _openMemberLocation(LocationShare location) async {
+    try {
+      await MapService.openMemberLocation(location);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening map: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openDirections(LocationShare location) async {
+    try {
+      await MapService.openDirections(
+        destinationLat: location.latitude,
+        destinationLng: location.longitude,
+        destinationName: location.displayName,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening directions: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openAllMembersMap(List<LocationShare> locations) async {
+    try {
+      await MapService.openAllMembersMap(locations);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening map: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
