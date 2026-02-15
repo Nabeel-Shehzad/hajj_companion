@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/permit/permit_display_screen.dart';
 import 'services/settings_service.dart';
 import 'services/gesture_service.dart';
 import 'services/data_seed_service.dart';
+import 'services/notification_service.dart';
 import 'database/app_database.dart';
 import 'utils/app_localizations.dart';
 
@@ -36,6 +39,15 @@ class LanguageProvider extends InheritedWidget {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize notification service
+  await NotificationService().initialize();
+  
   runApp(const HajjCompanionApp());
 }
 

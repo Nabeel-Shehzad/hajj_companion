@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'permit/permit_entry_screen.dart';
 import 'permit/permit_display_screen.dart';
 import 'ritual/ritual_selection_screen.dart';
 import 'ritual/location_tracking_screen.dart';
-import 'family/family_group_screen.dart';
+import 'family_safety/family_safety_home_screen.dart';
 import 'settings_screen.dart';
 import '../main.dart';
+import '../services/device_id_service.dart';
+import '../services/family_group_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -340,12 +343,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         tr?.familySafety ?? 'Family Safety',
                         Icons.family_restroom,
                         const Color(0xFF2E8B57),
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const FamilyGroupScreen(),
-                          ),
-                        ),
+                        () async {
+                          // Initialize services for Family Safety
+                          final prefs = await SharedPreferences.getInstance();
+                          final deviceIdService = DeviceIdService(prefs);
+                          final groupService = FamilyGroupService(
+                            FirebaseFirestore.instance,
+                            deviceIdService,
+                            prefs,
+                          );
+
+                          if (!mounted) return;
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FamilySafetyHomeScreen(
+                                deviceIdService: deviceIdService,
+                                groupService: groupService,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       _buildFeatureCard(
                         context,
