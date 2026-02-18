@@ -68,14 +68,43 @@ class RitualSettings extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+// ChatConversations Table - AI Chatbot conversation threads
+class ChatConversations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text().withLength(max: 100)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// ChatMessages Table - Individual messages in conversations
+class ChatMessages extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get conversationId => integer().references(
+    ChatConversations,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+  TextColumn get content => text()();
+  BoolColumn get isUser => boolean()();
+  DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+}
+
 @DriftDatabase(
-  tables: [Permits, AppSettings, Duas, GeofenceLocations, RitualSettings],
+  tables: [
+    Permits,
+    AppSettings,
+    Duas,
+    GeofenceLocations,
+    RitualSettings,
+    ChatConversations,
+    ChatMessages,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2; // Incremented for new tables
+  int get schemaVersion => 3; // Incremented for chat tables
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -88,6 +117,11 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(duas);
         await m.createTable(geofenceLocations);
         await m.createTable(ritualSettings);
+      }
+      if (from < 3) {
+        // Add chat tables
+        await m.createTable(chatConversations);
+        await m.createTable(chatMessages);
       }
     },
   );
@@ -189,6 +223,87 @@ class AppDatabase extends _$AppDatabase {
         ritualSettings,
       )..where((t) => t.id.equals(existing.id))).write(settings);
     }
+  }
+
+  // ChatConversations CRUD Operations
+  Future<List<ChatConversation>> getAllConversations() =>
+      (select(chatConversations)..orderBy([
+            (t) =>
+                OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc),
+          ]))
+          .get();
+
+  Stream<List<ChatConversation>> watchAllConversations() =>
+      (select(chatConversations)..orderBy([
+            (t) =>
+                OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc),
+          ]))
+          .watch();
+
+  Future<ChatConversation?> getConversation(int id) => (select(
+    chatConversations,
+  )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<int> createConversation(String title) async {
+    return await into(chatConversations).insert(
+      ChatConversationsCompanion.insert(
+        title: title,
+        createdAt: Value(DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> updateConversationTitle(int id, String title) async {
+    await (update(chatConversations)..where((t) => t.id.equals(id))).write(
+      ChatConversationsCompanion(
+        title: Value(title),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> updateConversationTimestamp(int id) async {
+    await (update(chatConversations)..where((t) => t.id.equals(id))).write(
+      ChatConversationsCompanion(updatedAt: Value(DateTime.now())),
+    );
+  }
+
+  Future<void> deleteConversation(int id) async {
+    await (delete(chatConversations)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ChatMessages CRUD Operations
+  Future<List<ChatMessage>> getMessagesForConversation(int conversationId) =>
+      (select(chatMessages)
+            ..where((t) => t.conversationId.equals(conversationId))
+            ..orderBy([(t) => OrderingTerm(expression: t.timestamp)]))
+          .get();
+
+  Stream<List<ChatMessage>> watchMessagesForConversation(int conversationId) =>
+      (select(chatMessages)
+            ..where((t) => t.conversationId.equals(conversationId))
+            ..orderBy([(t) => OrderingTerm(expression: t.timestamp)]))
+          .watch();
+
+  Future<int> insertMessage(ChatMessagesCompanion message) async {
+    final id = await into(chatMessages).insert(message);
+    // Update conversation timestamp
+    if (message.conversationId.present) {
+      await updateConversationTimestamp(message.conversationId.value);
+    }
+    return id;
+  }
+
+  Future<void> deleteMessagesForConversation(int conversationId) async {
+    await (delete(
+      chatMessages,
+    )..where((t) => t.conversationId.equals(conversationId))).go();
+  }
+
+  Future<void> clearAllConversations() async {
+    await delete(chatMessages).go();
+    await delete(chatConversations).go();
   }
 }
 

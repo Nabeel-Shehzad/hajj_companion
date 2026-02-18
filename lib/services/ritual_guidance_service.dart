@@ -162,12 +162,6 @@ class RitualGuidanceService {
     }
   }
 
-  /// Map ritual type to database ritual name
-  String _getRitualNameFromType(String type) {
-    // Return null to load ALL locations regardless of ritual
-    // This allows showing nearby duas for any location
-    return type.toLowerCase(); // Maps 'self' or 'proxy' to ritual names
-  }
 
   /// Update ritual settings
   Future<void> updateSettings({

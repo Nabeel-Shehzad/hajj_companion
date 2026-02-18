@@ -7,10 +7,12 @@ import 'permit/permit_display_screen.dart';
 import 'ritual/ritual_selection_screen.dart';
 import 'ritual/location_tracking_screen.dart';
 import 'family_safety/family_safety_home_screen.dart';
+import 'chat_list_screen.dart';
 import 'settings_screen.dart';
 import '../main.dart';
 import '../services/device_id_service.dart';
 import '../services/family_group_service.dart';
+import '../database/app_database.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -365,6 +367,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           );
                         },
+                      ),
+                      _buildFeatureCard(
+                        context,
+                        'AI Assistant',
+                        Icons.smart_toy,
+                        const Color(0xFF9C27B0),
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ChatListScreen(database: AppDatabase()),
+                          ),
+                        ),
                       ),
                       _buildFeatureCard(
                         context,
