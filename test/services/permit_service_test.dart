@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hajj_companion/models/permit_model.dart';
-import 'package:hajj_companion/services/permit_service.dart';
-import 'package:hajj_companion/database/app_database.dart';
+import 'package:hajj_companion/core/models/permit_model.dart';
+import 'package:hajj_companion/core/services/permit_service.dart';
+import 'package:hajj_companion/core/database/app_database.dart';
 
 void main() {
   late PermitService permitService;

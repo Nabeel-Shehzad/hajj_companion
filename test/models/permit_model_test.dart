@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hajj_companion/models/permit_model.dart';
+import 'package:hajj_companion/core/models/permit_model.dart';
 
 void main() {
   group('PermitModel Validation Tests', () {

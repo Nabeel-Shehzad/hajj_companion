@@ -46,17 +46,17 @@ void main() async {
   // Initialize notification service
   await NotificationService().initialize();
 
-  runApp(const HajjCompanionApp());
+  runApp(const HajjCompanionMobileApp());
 }
 
-class HajjCompanionApp extends StatefulWidget {
-  const HajjCompanionApp({super.key});
+class HajjCompanionMobileApp extends StatefulWidget {
+  const HajjCompanionMobileApp({super.key});
 
   @override
-  State<HajjCompanionApp> createState() => _HajjCompanionAppState();
+  State<HajjCompanionMobileApp> createState() => _HajjCompanionMobileAppState();
 }
 
-class _HajjCompanionAppState extends State<HajjCompanionApp> {
+class _HajjCompanionMobileAppState extends State<HajjCompanionMobileApp> {
   final _settingsService = SettingsService();
   final _gestureService = GestureService();
   String _currentLanguage = 'English';
@@ -126,14 +126,6 @@ class _HajjCompanionAppState extends State<HajjCompanionApp> {
     // Convert "English"/"Arabic" to "en"/"ar" for AppLocalizations
     final languageCode = isArabic ? 'ar' : 'en';
     final localizations = AppLocalizations(languageCode);
-
-    // Debug: Print to verify the setup
-    print(
-      'Main App - Current Language: $_currentLanguage, isArabic: $isArabic, languageCode: $languageCode',
-    );
-    print(
-      'Main App - Sample translation homeTitle: ${localizations.homeTitle}',
-    );
 
     return LanguageProvider(
       language: _currentLanguage,
