@@ -33,7 +33,7 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
 
   @override
   void dispose() {
-    _database.close();
+    // Don't close the singleton database - it's shared across the app
     super.dispose();
   }
 

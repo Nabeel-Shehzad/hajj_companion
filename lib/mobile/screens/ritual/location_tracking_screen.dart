@@ -290,7 +290,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
     _geofenceService.dispose();
     _locationService.dispose();
     _audioService.dispose();
-    _database.close();
+    // Don't close the singleton database - it's shared across the app
     super.dispose();
   }
 
