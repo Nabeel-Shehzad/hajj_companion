@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- WearOS hardware feature declaration -->
+    <uses-feature android:name="android.hardware.type.watch" android:required="false" />
+
     <!-- Location permissions for ritual guidance and GPS tracking -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

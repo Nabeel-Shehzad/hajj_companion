@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/Hp/Downloads/Projects/hajj_companion -type d -name wear*)"
+    ]
+  }
+}

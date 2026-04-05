@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 /// GPS tracking service for ritual guidance
 /// Requirements: FR-05 - ±10 meter accuracy
 class LocationService {
-  StreamController<Position>? _positionController;
+  // Initialized eagerly so callers can subscribe BEFORE startTracking() is
+  // called and not miss any errors emitted during geolocator startup.
+  final StreamController<Position> _positionController =
+      StreamController<Position>.broadcast();
   StreamSubscription<Position>? _positionStreamSub;
   bool _isTracking = false;
 
-  Stream<Position> get positionStream => _positionController!.stream;
+  Stream<Position> get positionStream => _positionController.stream;
   bool get isTracking => _isTracking;
 
   /// Check and request location permissions
@@ -19,81 +24,64 @@ class LocationService {
       // This is more reliable on WearOS
       var status = await ph.Permission.location.status;
 
-      print('Current location permission status: $status');
-
       if (status.isDenied) {
-        print('Requesting location permission...');
         status = await ph.Permission.location.request();
-        print('Permission request result: $status');
       }
 
-      if (status.isPermanentlyDenied) {
-        print('Location permission permanently denied');
+      if (status.isPermanentlyDenied || status.isDenied) {
         return false;
       }
 
-      if (status.isDenied) {
-        print('Location permission denied');
-        return false;
-      }
-
-      print('Location permission granted!');
       return true;
     } catch (e) {
-      print('Error checking permissions: $e');
-      // Handle WearOS or platform-specific errors
+      debugPrint('LocationService: Error checking permissions: $e');
       return false;
     }
   }
 
   /// Start continuous GPS tracking with high accuracy
   Future<bool> startTracking() async {
-    if (_isTracking) {
-      print('LocationService: Already tracking');
-      return true;
-    }
+    if (_isTracking) return true;
 
     try {
-      print('LocationService: Checking permissions before starting...');
       final hasPermission = await checkPermissions();
-      if (!hasPermission) {
-        print('LocationService: No permission, cannot start tracking');
-        return false;
-      }
+      if (!hasPermission) return false;
 
-      print('LocationService: Creating position controller...');
-      _positionController = StreamController<Position>.broadcast();
+      // _positionController already exists — do not recreate it.
 
-      const locationSettings = LocationSettings(
-        accuracy: LocationAccuracy.high, // ±10 meters
-        distanceFilter: 5, // Update every 5 meters
-      );
+      // Use AndroidSettings with forceLocationManager=true on Android.
+      // This bypasses the Fused Location Provider (Google Play Services) and
+      // uses the standard Android LocationManager directly — required for
+      // WearOS where the Fused Location Provider throws "not implemented".
+      final locationSettings = Platform.isAndroid
+          ? AndroidSettings(
+              accuracy: LocationAccuracy.high, // ±10 meters
+              distanceFilter: 5, // Update every 5 meters
+              forceLocationManager: true,
+            )
+          : const LocationSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter: 5,
+            );
 
-      print('LocationService: Starting position stream...');
       _positionStreamSub =
           Geolocator.getPositionStream(
             locationSettings: locationSettings,
           ).listen(
             (Position position) {
-              print(
-                'LocationService: Got position: ${position.latitude}, ${position.longitude}',
-              );
-              _positionController?.add(position);
+              _positionController.add(position);
             },
             onError: (error) {
-              print('LocationService: Position stream error: $error');
-              // Don't propagate error to avoid crashes - just log it
-              // UI will handle timeout for no position data
+              // Forward the error so screens can react (e.g. location service disabled)
+              _positionController.addError(error);
             },
-            cancelOnError: false, // Keep trying even after errors
+            cancelOnError: false,
           );
 
       _isTracking = true;
-      print('LocationService: Tracking started successfully');
       return true;
     } catch (e) {
-      print('LocationService: Error starting tracking: $e');
-      // Handle WearOS or platform-specific errors
+      debugPrint('LocationService: Error starting tracking: $e');
       return false;
     }
   }
@@ -101,10 +89,9 @@ class LocationService {
   /// Stop GPS tracking to save battery
   Future<void> stopTracking() async {
     await _positionStreamSub?.cancel();
-    await _positionController?.close();
     _positionStreamSub = null;
-    _positionController = null;
     _isTracking = false;
+    // Do NOT close _positionController — it is reused if tracking restarts.
   }
 
   /// Get current location once (for one-time checks)
@@ -115,6 +102,7 @@ class LocationService {
     try {
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        forceAndroidLocationManager: Platform.isAndroid,
       );
     } catch (e) {
       return null;
@@ -128,5 +116,6 @@ class LocationService {
 
   void dispose() {
     stopTracking();
+    _positionController.close();
   }
 }

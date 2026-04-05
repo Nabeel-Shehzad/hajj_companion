@@ -62,9 +62,16 @@ class GeofenceService {
     _geofenceController = StreamController<GeofenceEvent>.broadcast();
 
     // Listen to location updates
-    _locationSub = _locationService.positionStream.listen((position) {
-      _checkGeofences(position);
-    });
+    _locationSub = _locationService.positionStream.listen(
+      (position) {
+        _checkGeofences(position);
+      },
+      onError: (error) {
+        // Position stream errors (e.g. location service disabled) are handled
+        // by the UI layer. Swallow here to prevent unhandled exception crash.
+      },
+      cancelOnError: false,
+    );
 
     _isMonitoring = true;
     return true;

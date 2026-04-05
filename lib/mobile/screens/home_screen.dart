@@ -161,11 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = LanguageProvider.of(context);
     final tr = provider?.localizations;
 
-    // Debug: Print to verify translation is working
-    print(
-      'Home Screen - Language: ${provider?.language}, languageCode: ${tr?.languageCode}, homeTitle: ${tr?.homeTitle}',
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: Text(tr?.homeTitle ?? 'Hajj & Umrah Companion'),

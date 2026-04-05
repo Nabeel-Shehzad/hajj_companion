@@ -123,10 +123,10 @@ class _WearPermitEntryScreenState extends State<WearPermitEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final isRound = screenSize.width == screenSize.height;
+    final isRound =
+        screenSize.width == screenSize.height && screenSize.width >= 300;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Permit'), centerTitle: true),
       body: _isSaving
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF00A651)),
@@ -137,6 +137,28 @@ class _WearPermitEntryScreenState extends State<WearPermitEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Header row with back button and title
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Icon(Icons.arrow_back, size: 20),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Add Permit',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
                     // Permit Number
                     Text(
                       'Permit Number',

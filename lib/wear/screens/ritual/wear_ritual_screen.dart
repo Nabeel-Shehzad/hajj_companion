@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hajj_companion/core/database/app_database.dart';
@@ -18,12 +20,17 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
   late final GeofenceService _geofenceService;
   late final RitualGuidanceService _guidanceService;
 
+  StreamSubscription<GuidanceEvent>? _guidanceSubscription;
+  StreamSubscription<dynamic>? _positionSubscription;
+
   bool _isTracking = false;
   bool _hasError = false;
   String _errorMessage = '';
   String _currentLocation = 'Acquiring GPS signal...';
   List<DuaWithLocation> _currentDuas = [];
+  // True when any GPS position arrives (not just when near a holy site)
   bool _hasReceivedPosition = false;
+  bool _gpsTimedOut = false;
 
   @override
   void initState() {
@@ -39,93 +46,112 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
   }
 
   Future<void> _requestPermissionsAndStart() async {
-    print('WearRitualScreen: Requesting permissions...');
-
-    // First check and request permissions
+    // Check / request the location permission.
+    // Note: Geolocator.isLocationServiceEnabled() crashes on WearOS with
+    // ApiException: "Not implemented on this platform" at the native layer —
+    // it cannot be caught in Dart. We skip that check entirely and rely on
+    // the position stream's onError to surface the "service disabled" error.
     final hasPermission = await _locationService.checkPermissions();
-
-    print('WearRitualScreen: Permission result: $hasPermission');
-
     if (!hasPermission) {
       if (mounted) {
         setState(() {
           _hasError = true;
           _errorMessage =
-              'Location permission required. Please enable location access in settings.';
+              'Location permission required. Enable location access in settings.';
         });
       }
       return;
     }
 
-    print('WearRitualScreen: Permissions granted, starting tracking...');
-    // Permissions granted, start tracking
     _startTracking();
   }
 
   Future<void> _startTracking() async {
     try {
-      print('WearRitualScreen: Calling startGuidance...');
+      // ── Step 1: Subscribe to raw position stream FIRST ────────────────────
+      // The _positionController in LocationService is initialised eagerly, so
+      // this subscription is in place before startGuidance() starts the
+      // geolocator. That prevents the race condition where an immediate
+      // "location service disabled" error fires before anyone is listening
+      // (broadcast streams discard events with no current subscribers).
+      _positionSubscription = _locationService.positionStream.listen(
+        (position) {
+          if (mounted && !_hasReceivedPosition) {
+            setState(() {
+              _hasReceivedPosition = true;
+              _gpsTimedOut = false;
+              if (_currentDuas.isEmpty) _currentLocation = 'GPS active';
+            });
+          }
+        },
+        onError: (error) {
+          debugPrint('WearRitualScreen: position stream error: $error');
+          if (mounted) {
+            setState(() {
+              _hasError = true;
+              _errorMessage =
+                  'Location service is off. Enable GPS in Settings → Location.';
+            });
+          }
+        },
+      );
+
+      // ── Step 2: Start guidance (internally starts geolocator) ─────────────
       final started = await _guidanceService.startGuidance(ritualType: 'self');
 
-      print('WearRitualScreen: startGuidance result: $started');
-
-      if (started) {
-        setState(() => _isTracking = true);
-
-        // Listen for guidance events
-        _guidanceService.guidanceEvents.listen(
-          (event) {
-            if (mounted) {
-              print(
-                'WearRitualScreen: Received guidance event for ${event.location.nameEn}',
-              );
-              setState(() {
-                _hasReceivedPosition = true;
-                _currentLocation = event.location.nameEn;
-                _currentDuas = event.duasWithLocations;
-              });
-
-              // Trigger haptic feedback
-              HapticFeedback.mediumImpact();
-            }
-          },
-          onError: (error) {
-            print('WearRitualScreen: Guidance stream error: $error');
-            // Handle location service errors gracefully
-            if (mounted && error.toString().contains('disabled')) {
-              setState(() {
-                _hasError = true;
-                _errorMessage = 'Location service is disabled';
-              });
-            }
-          },
-        );
-
-        // Set a timeout to check if we're receiving location data
-        Future.delayed(const Duration(seconds: 5), () {
-          if (mounted && _isTracking && !_hasReceivedPosition) {
-            print('WearRitualScreen: No GPS signal after 5 seconds');
-          }
-        });
-      } else {
-        print('WearRitualScreen: Failed to start guidance');
-        setState(() {
-          _hasError = true;
-          _errorMessage = 'Could not start GPS tracking. Check permissions.';
-        });
+      if (!started) {
+        await _positionSubscription?.cancel();
+        _positionSubscription = null;
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Could not start GPS tracking. Check permissions.';
+          });
+        }
+        return;
       }
+
+      if (mounted) setState(() => _isTracking = true);
+
+      // ── Step 3: Listen for holy-site guidance events ──────────────────────
+      _guidanceSubscription = _guidanceService.guidanceEvents.listen(
+        (event) {
+          if (mounted) {
+            setState(() {
+              _hasReceivedPosition = true;
+              _gpsTimedOut = false;
+              _currentLocation = event.location.nameEn;
+              _currentDuas = event.duasWithLocations;
+            });
+            HapticFeedback.mediumImpact();
+          }
+        },
+        onError: (error) {
+          debugPrint('WearRitualScreen: guidance stream error: $error');
+          if (mounted && error.toString().toLowerCase().contains('disabled')) {
+            setState(() {
+              _hasError = true;
+              _errorMessage = 'Location service is disabled';
+            });
+          }
+        },
+      );
+
+      // ── Step 4: Timeout only if GPS genuinely produces no positions ────────
+      // 30 s covers GPS cold-start on WearOS devices.
+      Future.delayed(const Duration(seconds: 30), () {
+        if (mounted && _isTracking && !_hasReceivedPosition) {
+          setState(() => _gpsTimedOut = true);
+        }
+      });
     } catch (e) {
-      // Handle GPS errors
-      print('WearRitualScreen: Error starting tracking: $e');
+      debugPrint('WearRitualScreen: error starting tracking: $e');
       if (mounted) {
         setState(() {
           _hasError = true;
-          if (e.toString().contains('disabled')) {
-            _errorMessage =
-                'Location service is disabled. Enable it in Settings.';
-          } else {
-            _errorMessage = 'GPS error: ${e.toString()}';
-          }
+          _errorMessage = e.toString().toLowerCase().contains('disabled')
+              ? 'Location service is disabled. Enable it in Settings.'
+              : 'GPS error: ${e.toString()}';
         });
       }
     }
@@ -133,6 +159,8 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
 
   @override
   void dispose() {
+    _positionSubscription?.cancel();
+    _guidanceSubscription?.cancel();
     try {
       _guidanceService.dispose();
     } catch (e) {
@@ -144,10 +172,10 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final isRound = screenSize.width == screenSize.height;
+    final isRound =
+        screenSize.width == screenSize.height && screenSize.width >= 300;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ritual Guide'), centerTitle: true),
       body: SafeArea(
         child: _hasError
             ? _buildErrorView(isRound)
@@ -237,24 +265,36 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
   }
 
   Widget _buildLoadingView() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(color: Color(0xFF00A651)),
-          SizedBox(height: 16),
-          Text('Starting GPS...', style: TextStyle(fontSize: 12)),
-        ],
-      ),
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.topLeft,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, size: 20),
+            onPressed: () => Navigator.pop(context),
+            padding: const EdgeInsets.all(8),
+          ),
+        ),
+        const Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Color(0xFF00A651)),
+              SizedBox(height: 16),
+              Text('Starting GPS...', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildTrackingView(bool isRound) {
     return Column(
       children: [
-        // Location Header
+        // Location Header with back button
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
           decoration: BoxDecoration(
             color: const Color(0xFF006B3E).withOpacity(0.3),
             border: Border(
@@ -266,6 +306,11 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
           ),
           child: Row(
             children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(Icons.arrow_back, size: 18),
+              ),
+              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: const BoxDecoration(
@@ -278,7 +323,7 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   _currentLocation,
@@ -299,7 +344,11 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
           child: _currentDuas.isEmpty
               ? _buildWaitingView(isRound)
               : ListView.builder(
-                  padding: EdgeInsets.all(isRound ? 14 : 10),
+                  // Round dials: extra horizontal padding to avoid corner clipping
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isRound ? 20 : 10,
+                    vertical: isRound ? 8 : 10,
+                  ),
                   itemCount: _currentDuas.length,
                   itemBuilder: (context, index) {
                     final duaWithLocation = _currentDuas[index];
@@ -312,36 +361,84 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
   }
 
   Widget _buildWaitingView(bool isRound) {
+    final String title;
+    final String subtitle;
+    final IconData icon;
+
+    if (_hasReceivedPosition) {
+      icon = Icons.explore;
+      title = 'Move closer to a holy site';
+      subtitle = 'GPS is tracking your location';
+    } else if (_gpsTimedOut) {
+      icon = Icons.gps_off;
+      title = 'No GPS signal received';
+      subtitle = 'GPS is on but no signal.\nOn emulator: set location in\nExtended Controls → Location.\nOn device: go outdoors.';
+    } else {
+      icon = Icons.gps_not_fixed;
+      title = 'Waiting for GPS...';
+      subtitle = 'Acquiring signal — may take up to 30s outdoors';
+    }
+
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(isRound ? 20.0 : 14.0),
+        // Round dials clip corners — use extra horizontal inset
+        padding: EdgeInsets.symmetric(
+          horizontal: isRound ? 28.0 : 14.0,
+          vertical: isRound ? 12.0 : 10.0,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              _hasReceivedPosition ? Icons.explore : Icons.gps_not_fixed,
-              size: 40,
-              color: Colors.white.withOpacity(0.5),
-            ),
-            const SizedBox(height: 12),
+            Icon(icon, size: 36, color: Colors.white.withOpacity(0.5)),
+            const SizedBox(height: 10),
             Text(
-              _hasReceivedPosition
-                  ? 'Move closer to a holy site'
-                  : 'Waiting for GPS signal...',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              _hasReceivedPosition
-                  ? 'GPS is tracking your location'
-                  : 'Set emulator location in Extended Controls',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white.withOpacity(0.6),
-                fontSize: 9,
+              title,
+              style: TextStyle(
+                fontSize: isRound ? 11 : 12,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 5),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: isRound ? 9 : 10,
+                color: Colors.white.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (_gpsTimedOut && !_hasReceivedPosition) ...[
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _gpsTimedOut = false;
+                    _hasError = false;
+                    _errorMessage = '';
+                  });
+                  _requestPermissionsAndStart();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00A651).withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF00A651).withOpacity(0.5),
+                    ),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(fontSize: 11, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -350,11 +447,18 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
 
   Widget _buildDuaCard(DuaWithLocation duaWithLocation, bool isRound) {
     final dua = duaWithLocation.dua;
+    // Smaller sizes for round dials where corners are clipped
+    final double arabicSize = isRound ? 12.0 : 14.0;
+    final double translationSize = isRound ? 9.0 : 10.0;
+    final double translitSize = isRound ? 8.0 : 9.0;
+    final EdgeInsets cardPadding = isRound
+        ? const EdgeInsets.all(8)
+        : const EdgeInsets.all(10);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -394,32 +498,36 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
             // Arabic Text
             Text(
               dua.arabicText,
-              style: const TextStyle(
-                fontSize: 14,
+              style: TextStyle(
+                fontSize: arabicSize,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 height: 1.6,
               ),
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
+              maxLines: 6,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
 
             // English Translation
             Text(
               dua.englishTranslation,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: translationSize,
                 color: Colors.white.withOpacity(0.8),
                 height: 1.3,
               ),
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
             ),
 
             // Transliteration (if available)
             if (dua.transliteration != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 5),
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(4),
@@ -427,10 +535,12 @@ class _WearRitualScreenState extends State<WearRitualScreen> {
                 child: Text(
                   dua.transliteration!,
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: translitSize,
                     fontStyle: FontStyle.italic,
                     color: Colors.white.withOpacity(0.6),
                   ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

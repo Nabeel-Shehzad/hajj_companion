@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -32,6 +33,7 @@ class HajjCompanionWearApp extends StatefulWidget {
 
 class _HajjCompanionWearAppState extends State<HajjCompanionWearApp> {
   final _gestureService = GestureService();
+  StreamSubscription<WristGesture>? _gestureSubscription;
 
   @override
   void initState() {
@@ -41,17 +43,15 @@ class _HajjCompanionWearAppState extends State<HajjCompanionWearApp> {
   }
 
   Future<void> _seedDatabaseIfNeeded() async {
-    final database = AppDatabase();
+    // Use the singleton instance to avoid multiple database connections
+    final database = AppDatabase.instance;
     final seedService = DataSeedService(database);
     await seedService.seedInitialData();
   }
 
   Future<void> _initWristRaiseGesture() async {
-    // Start monitoring wrist raise gesture
     _gestureService.startMonitoring();
-
-    // Listen for wrist raise events
-    _gestureService.gestureStream.listen((gesture) {
+    _gestureSubscription = _gestureService.gestureStream.listen((gesture) {
       if (gesture == WristGesture.raised) {
         _showPermitQuickView();
       }
@@ -71,6 +71,7 @@ class _HajjCompanionWearAppState extends State<HajjCompanionWearApp> {
 
   @override
   void dispose() {
+    _gestureSubscription?.cancel();
     _gestureService.dispose();
     super.dispose();
   }
@@ -91,11 +92,9 @@ class _HajjCompanionWearAppState extends State<HajjCompanionWearApp> {
           primary: Color(0xFF00A651), // Brighter green for dark mode
           secondary: Color(0xFFD4AF37), // Gold
           surface: Color(0xFF1A1A1A),
-          background: Colors.black,
           onPrimary: Colors.white,
           onSecondary: Colors.black,
           onSurface: Colors.white,
-          onBackground: Colors.white,
         ),
         // WearOS-optimized typography
         textTheme: const TextTheme(

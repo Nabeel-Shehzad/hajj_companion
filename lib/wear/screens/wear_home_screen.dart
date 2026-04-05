@@ -12,7 +12,11 @@ class WearHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final isRound = screenSize.width == screenSize.height;
+    // WearOS round displays always have equal width/height. Rectangular watches
+    // have different dimensions. The >=300 guard filters out unlikely edge cases
+    // where a tiny square non-watch screen could be misidentified as round.
+    final isRound =
+        screenSize.width == screenSize.height && screenSize.width >= 300;
 
     return Scaffold(
       body: SafeArea(

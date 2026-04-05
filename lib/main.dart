@@ -127,13 +127,6 @@ class _HajjCompanionAppState extends State<HajjCompanionApp> {
     final languageCode = isArabic ? 'ar' : 'en';
     final localizations = AppLocalizations(languageCode);
 
-    // Debug: Print to verify the setup
-    print(
-      'Main App - Current Language: $_currentLanguage, isArabic: $isArabic, languageCode: $languageCode',
-    );
-    print(
-      'Main App - Sample translation homeTitle: ${localizations.homeTitle}',
-    );
 
     return LanguageProvider(
       language: _currentLanguage,

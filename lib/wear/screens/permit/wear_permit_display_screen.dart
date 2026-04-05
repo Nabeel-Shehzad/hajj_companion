@@ -45,7 +45,8 @@ class _WearPermitDisplayScreenState extends State<WearPermitDisplayScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final isRound = screenSize.width == screenSize.height;
+    final isRound =
+        screenSize.width == screenSize.height && screenSize.width >= 300;
 
     if (_isLoading) {
       return Scaffold(
@@ -295,11 +296,17 @@ class _WearPermitDisplayScreenState extends State<WearPermitDisplayScreen> {
         _buildInfoRow(Icons.badge, 'Permit', _permit!.permitNumber),
         const SizedBox(height: 12),
 
-        // Dates
+        // Dates — split across two rows to prevent truncation on narrow screens
         _buildInfoRow(
           Icons.calendar_today,
-          'Valid',
-          '${_formatDate(_permit!.startDate)} - ${_formatDate(_permit!.endDate)}',
+          'From',
+          _formatDate(_permit!.startDate),
+        ),
+        const SizedBox(height: 8),
+        _buildInfoRow(
+          Icons.event,
+          'Until',
+          _formatDate(_permit!.endDate),
         ),
         const SizedBox(height: 12),
 
