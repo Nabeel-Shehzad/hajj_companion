@@ -17,11 +17,11 @@ class GestureService {
   double _lastX = 0, _lastY = 0, _lastZ = 0;
 
   // Threshold values for wrist-raise detection (smartwatch)
-  static const double _wristRaiseThreshold = 8.0; // m/s² upward acceleration
-  static const double _horizontalThreshold = 4.0; // m/s² limit for horizontal
+  static const double _wristRaiseThreshold = 8.0; // m/s upward acceleration
+  static const double _horizontalThreshold = 4.0; // m/s limit for horizontal
 
   // Threshold values for shake detection (mobile phone)
-  static const double _shakeThreshold = 15.0; // m/s² acceleration difference
+  static const double _shakeThreshold = 15.0; // m/s acceleration difference
   static const int _debounceMilliseconds =
       1500; // 1.5 seconds between detections
 

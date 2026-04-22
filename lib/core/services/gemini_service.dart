@@ -179,21 +179,6 @@ Response format:
     }
   }
 
-  /// Get a one-time response without maintaining chat history
-  Future<String> getOneTimeResponse(String prompt) async {
-    try {
-      final fullPrompt = '$_systemPrompt\n\nUser question: $prompt';
-      final response = await _model.generateContent([Content.text(fullPrompt)]);
-
-      return response.text ?? 'Sorry, I could not generate a response.';
-    } catch (e) {
-      if (e.toString().contains('SAFETY')) {
-        return 'I apologize, but I cannot respond to that message. Please ask questions related to Hajj or Umrah pilgrimages.';
-      }
-      return 'Error: ${e.toString()}';
-    }
-  }
-
   /// Clear chat history and start fresh
   void clearHistory() {
     _chatSession = null;
