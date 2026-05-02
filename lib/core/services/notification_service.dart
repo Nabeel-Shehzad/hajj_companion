@@ -207,7 +207,7 @@ class NotificationService {
   /// Handle notification tap when app is in background
   void _handleMessageOpenedApp(RemoteMessage message) {
     print('Message opened app: ${message.data}');
-    // TODO: Navigate to appropriate screen based on message.data
+    
   }
 
   /// Handle local notification tap

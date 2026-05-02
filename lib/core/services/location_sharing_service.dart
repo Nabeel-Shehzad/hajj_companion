@@ -151,7 +151,6 @@ class LocationSharingService {
           MemberWithLocation(member: member, location: location),
         );
       }
-
       return membersWithLocations;
     });
   }
