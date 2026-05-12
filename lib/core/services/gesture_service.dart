@@ -1,19 +1,18 @@
 import 'dart:async';
 import 'package:sensors_plus/sensors_plus.dart';
 
-/// FR-03: Wrist-Raise and Shake Gesture Detection Service
 /// Detects when user raises wrist to display permit (for smartwatch)
 /// Also detects shake gestures (for mobile phone demo)
 class GestureService {
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   final _gestureController = StreamController<WristGesture>.broadcast();
-
+//Creates a stream controller to send detected gesture events to different parts of the app
+  
   Stream<WristGesture> get gestureStream => _gestureController.stream;
-
+//exposes the gesture stream so other files can listen to detected gestures.
   bool _isMonitoring = false;
   DateTime? _lastGestureTime;
-
-  // For shake detection
+//Stores previous accelerometer values to compare them with the new values
   double _lastX = 0, _lastY = 0, _lastZ = 0;
 
   // Threshold values for wrist-raise detection (smartwatch)
@@ -31,12 +30,16 @@ class GestureService {
 
     _isMonitoring = true;
     _accelerometerSubscription =
-        accelerometerEventStream(
-          samplingPeriod: SensorInterval.normalInterval,
-        ).listen(
-          _handleAccelerometerEvent,
-          onError: (error) {
-            print('Accelerometer error: $error');
+    //Stores the accelerometer subscription in a variable so it can be stopped later.
+    //Starts a stream that continuously receives accelerometer sensor data.
+    //Sets the sensor reading speed to a normal interval.
+  //begins listening to incoming accelerometer events.
+        accelerometerEventStream( samplingPeriod: SensorInterval.normalInterval,
+        ).listen (_handleAccelerometerEvent,
+        onError: (error)
+        //Every new sensor reading is sent to the _handleAccelerometerEvent method to analyze the movement.
+         {
+          print('Accelerometer error: $error');
           },
         );
   }
@@ -56,7 +59,7 @@ class GestureService {
           .difference(_lastGestureTime!)
           .inMilliseconds;
       if (timeSinceLastGesture < _debounceMilliseconds) {
-        return;
+        return;// Skip processing if we're still within the debounce period
       }
     }
 
@@ -105,7 +108,7 @@ class GestureService {
 }
 
 /// Wrist gesture types
-enum WristGesture {
+enum WristGesture { //enum to represent different wrist gestures that can be detected by the service.
   raised, // Wrist raised to view permit
   lowered, // Wrist lowered
 }

@@ -5,23 +5,24 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 /// GPS tracking service for ritual guidance
-/// Requirements: FR-05 - ±10 meter accuracy
 class LocationService {
-  // Initialized eagerly so callers can subscribe BEFORE startTracking() is
-  // called and not miss any errors emitted during geolocator startup.
+  // We use a StreamController to broadcast location updates to multiple listeners (screens).
   final StreamController<Position> _positionController =
       StreamController<Position>.broadcast();
-  StreamSubscription<Position>? _positionStreamSub;
+      // We use a broadcast stream so multiple screens can listen to location updates
+  StreamSubscription<Position>? _positionStreamSub;// We keep the subscription so we can cancel it when stopping tracking
   bool _isTracking = false;
 
+
+// Expose the position stream for listeners (e.g. screens) to subscribe to
   Stream<Position> get positionStream => _positionController.stream;
-  bool get isTracking => _isTracking;
+  //Provides the position stream to other classes.
+  bool get isTracking => _isTracking;//return tracking status
 
   /// Check and request location permissions
   Future<bool> checkPermissions() async {
     try {
-      // Use permission_handler for explicit permission request
-      // This is more reliable on WearOS
+     
       var status = await ph.Permission.location.status;
 
       if (status.isDenied) {
@@ -59,13 +60,14 @@ class LocationService {
               distanceFilter: 5, // Update every 5 meters
               forceLocationManager: true,
             )
-          : const LocationSettings(
+          : const LocationSettings(// iOS and others
               accuracy: LocationAccuracy.high,
               distanceFilter: 5,
             );
 
       _positionStreamSub =
           Geolocator.getPositionStream(
+            //geolocator package provides a stream of location updates based on the specified settings.
             locationSettings: locationSettings,
           ).listen(
             (Position position) {
@@ -91,7 +93,7 @@ class LocationService {
     await _positionStreamSub?.cancel();
     _positionStreamSub = null;
     _isTracking = false;
-    // Do NOT close _positionController — it is reused if tracking restarts.
+    
   }
 
   /// Get current location once (for one-time checks)

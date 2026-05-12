@@ -6,10 +6,10 @@ import '../database/app_database.dart';
 class GeminiService {
   static const String _apiKey = 'AIzaSyAA6Fk28ENg6rUBdXUFh72b9XAA0HYR3Jc';
 
-  late final GenerativeModel _model;
+  late final GenerativeModel _model;// The Gemini model instance
   ChatSession? _chatSession;
   final AppDatabase _database;
-  int? _currentConversationId;
+  int? _currentConversationId;// Track the current conversation ID for database operations
 
   /// System prompt to restrict AI responses to Hajj and Umrah topics only
   static const String _systemPrompt = '''
@@ -52,7 +52,7 @@ Response format:
       apiKey: _apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.7,
-        topK: 40,
+        topK: 40,// Limits the model to consider only the top 40 most likely next tokens, which helps improve response quality and relevance.
         topP: 0.95,
         maxOutputTokens: 4096,
       ),

@@ -380,3 +380,5 @@ class _WearPermitDisplayScreenState extends State<WearPermitDisplayScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 }
+
+

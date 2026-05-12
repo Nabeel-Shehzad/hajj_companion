@@ -12,9 +12,6 @@ class WearHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    // WearOS round displays always have equal width/height. Rectangular watches
-    // have different dimensions. The >=300 guard filters out unlikely edge cases
-    // where a tiny square non-watch screen could be misidentified as round.
     final isRound =
         screenSize.width == screenSize.height && screenSize.width >= 300;
 
@@ -24,7 +21,7 @@ class WearHomeScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: isRound ? 24 : 16),
           children: [
             const SizedBox(height: 24),
-            // App Title
+
             Column(
               children: [
                 Icon(
@@ -45,23 +42,21 @@ class WearHomeScreen extends StatelessWidget {
                 ),
               ],
             ),
+
             const SizedBox(height: 24),
 
-            // Main Action Cards
             _WearActionCard(
               icon: Icons.badge,
               title: 'My Permit',
               subtitle: 'Digital ID',
               color: const Color(0xFF006B3E),
               onTap: () async {
-                // Check if permit exists
                 final permitService = PermitService(AppDatabase.instance);
                 final permit = await permitService.getPermit();
 
                 if (!context.mounted) return;
 
                 if (permit != null) {
-                  // Navigate to display screen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -69,7 +64,6 @@ class WearHomeScreen extends StatelessWidget {
                     ),
                   );
                 } else {
-                  // Navigate to entry screen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -79,7 +73,9 @@ class WearHomeScreen extends StatelessWidget {
                 }
               },
             ),
+
             const SizedBox(height: 12),
+
             _WearActionCard(
               icon: Icons.navigation,
               title: 'Ritual Guide',
@@ -94,7 +90,9 @@ class WearHomeScreen extends StatelessWidget {
                 );
               },
             ),
+
             const SizedBox(height: 12),
+
             _WearActionCard(
               icon: Icons.family_restroom,
               title: 'Family',
@@ -112,7 +110,6 @@ class WearHomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Tip for wrist raise
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -141,6 +138,7 @@ class WearHomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 24),
           ],
         ),

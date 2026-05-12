@@ -173,80 +173,83 @@ class _WearFamilyScreenState extends State<WearFamilyScreen> {
   // ── NOT IN GROUP ──────────────────────────────────────────────────────────
 
   Widget _buildNoGroupView(bool isRound) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isRound ? 28.0 : 16.0,
-              vertical: 10.0,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.family_restroom,
-                  size: 40,
-                  color: Colors.white.withOpacity(0.4),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'No Family Group',
-                  style: TextStyle(
-                    fontSize: isRound ? 13 : 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Join a group to track your family\'s location.',
-                  style: TextStyle(
-                    fontSize: isRound ? 9 : 10,
-                    color: Colors.white.withOpacity(0.5),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
+  return Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isRound ? 24.0 : 16.0,
+            vertical: 8.0,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.family_restroom,
+                size: 34,
+                color: Colors.white.withOpacity(0.4),
+              ),
 
-                // Join Group button
-                ElevatedButton.icon(
+              const SizedBox(height: 10),
+
+              Text(
+                'No Family Group',
+                style: TextStyle(
+                  fontSize: isRound ? 12 : 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 5),
+
+              Text(
+                'Join a group to track your family\'s location.',
+                style: TextStyle(
+                  fontSize: isRound ? 8 : 10,
+                  color: Colors.white.withOpacity(0.5),
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 14),
+
+              SizedBox(
+                height: 34,
+                child: ElevatedButton.icon(
                   onPressed: _navigateToJoin,
-                  icon: const Icon(Icons.group_add, size: 16),
-                  label: const Text('Join Group'),
+                  icon: const Icon(Icons.group_add, size: 12),
+                  label: const Text(
+                    'Join Group',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2E8B57),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+                      horizontal: 10,
+                      vertical: 4,
                     ),
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  'Ask your group admin for the 6-char join code.',
-                  style: TextStyle(
-                    fontSize: isRound ? 8 : 9,
-                    color: Colors.white.withOpacity(0.35),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _navigateToJoin() async {
     final result = await Navigator.push<bool>(

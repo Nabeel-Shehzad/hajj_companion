@@ -36,20 +36,20 @@ class _PermitEntryScreenState extends State<PermitEntryScreen> {
       _endDate = widget.existingPermit!.endDate;
     }
   }
-
+//هذا اذا كان عندي معلومات قديمه وابي اعدل فالشاشه تمتلي تلقاييا
   @override
   void dispose() {
     _permitNumberController.dispose();
     _fullNameController.dispose();
     super.dispose();
   }
-
+//ينظف ويحذف الكنترولر بعد ما يخلص من الشاشه عشان ما ياخذ ذاكره بدون فائده
   @override
   Widget build(BuildContext context) {
     final provider = LanguageProvider.of(context);
     final tr = provider?.localizations;
     final isArabic = provider?.language == 'Arabic';
-
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(

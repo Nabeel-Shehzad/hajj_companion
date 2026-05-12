@@ -23,7 +23,6 @@ class _PermitDisplayScreenState extends State<PermitDisplayScreen> {
   bool _gestureDetectionEnabled = false;
   bool _isGestureHighlighted = false;
 
-  @override
   void initState() {
     super.initState();
     _loadGestureSettings();

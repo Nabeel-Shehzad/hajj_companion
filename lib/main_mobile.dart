@@ -59,7 +59,7 @@ class HajjCompanionMobileApp extends StatefulWidget {
 class _HajjCompanionMobileAppState extends State<HajjCompanionMobileApp> {
   final _settingsService = SettingsService();
   final _gestureService = GestureService();
-  String _currentLanguage = 'English';
+  String _currentLanguage ='Arabic'; // Default to Arabic for mobile
   bool _gestureDetectionEnabled = false;
 
   @override

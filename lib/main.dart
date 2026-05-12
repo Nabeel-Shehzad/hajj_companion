@@ -14,14 +14,19 @@ import 'core/utils/app_localizations.dart';
 
 // Global navigator key for navigation from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+//used a global navigator key to navigate to the permit display screen when a wrist gesture is detected without needing widget context.
+// we used final to ensure that the navigator key is only set once and cannot be changed later in the app lifecycle, providing a consistent reference for navigation throughout the app.
 
 // Global access to current language
 class LanguageProvider extends InheritedWidget {
+  //This class is a provider that shares language information across the entire widget tree. It uses InheritedWidget pattern.
+  //nheritedWidget allows child widgets to access data without passing it through constructor parameters (prop drilling
   final String language;
   final AppLocalizations localizations;
 
-  const LanguageProvider({
+const LanguageProvider({
     super.key,
+    //super.key — Flutter key for widget identification
     required this.language,
     required this.localizations,
     required super.child,
@@ -30,10 +35,10 @@ class LanguageProvider extends InheritedWidget {
   static LanguageProvider? of(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<LanguageProvider>();
   }
-
+//This method is used to access the current LanguageProvider from anywhere in the widget tree using the BuildContext.
   @override
   bool updateShouldNotify(LanguageProvider oldWidget) {
-    return language != oldWidget.language;
+    return language != oldWidget.language; //اذا اللغه القديمه مو نفس الجديد يعني ترو وغير لي 
   }
 }
 
@@ -42,12 +47,12 @@ void main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
   // Initialize notification service
   await NotificationService().initialize();
 
   runApp(const HajjCompanionApp());
-}
+}//This function initializes Flutter services, Firebase, and notifications before starting the application.
+  
 
 class HajjCompanionApp extends StatefulWidget {
   const HajjCompanionApp({super.key});
@@ -59,6 +64,7 @@ class HajjCompanionApp extends StatefulWidget {
 class _HajjCompanionAppState extends State<HajjCompanionApp> {
   final _settingsService = SettingsService();
   final _gestureService = GestureService();
+
   String _currentLanguage = 'English';
   bool _gestureDetectionEnabled = false;
 
@@ -74,17 +80,16 @@ class _HajjCompanionAppState extends State<HajjCompanionApp> {
     final database = AppDatabase();
     final seedService = DataSeedService(database);
 
-    // Only seed if database is empty (first install)
     await seedService.seedInitialData();
   }
 
   Future<void> _initGlobalGestureDetection() async {
-    // Load gesture detection settings
+    // Load saved gesture setting from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     _gestureDetectionEnabled =
         prefs.getBool('gesture_detection_enabled') ?? false;
 
-    // Start monitoring if enabled
+    // If gesture detection is enabled, start monitoring wrist movement.
     if (_gestureDetectionEnabled) {
       _gestureService.startMonitoring();
     }
@@ -111,6 +116,7 @@ class _HajjCompanionAppState extends State<HajjCompanionApp> {
   void dispose() {
     _gestureService.dispose();
     super.dispose();
+    //stop the gesture service when the app is closed to free up resources and prevent memory leaks.
   }
 
   Future<void> _loadLanguage() async {
