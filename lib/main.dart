@@ -11,36 +11,11 @@ import 'core/services/data_seed_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/database/app_database.dart';
 import 'core/utils/app_localizations.dart';
+import 'core/providers/language_provider.dart';
+export 'core/providers/language_provider.dart';
 
 // Global navigator key for navigation from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-//used a global navigator key to navigate to the permit display screen when a wrist gesture is detected without needing widget context.
-// we used final to ensure that the navigator key is only set once and cannot be changed later in the app lifecycle, providing a consistent reference for navigation throughout the app.
-
-// Global access to current language
-class LanguageProvider extends InheritedWidget {
-  //This class is a provider that shares language information across the entire widget tree. It uses InheritedWidget pattern.
-  //nheritedWidget allows child widgets to access data without passing it through constructor parameters (prop drilling
-  final String language;
-  final AppLocalizations localizations;
-
-const LanguageProvider({
-    super.key,
-    //super.key — Flutter key for widget identification
-    required this.language,
-    required this.localizations,
-    required super.child,
-  });
-
-  static LanguageProvider? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<LanguageProvider>();
-  }
-//This method is used to access the current LanguageProvider from anywhere in the widget tree using the BuildContext.
-  @override
-  bool updateShouldNotify(LanguageProvider oldWidget) {
-    return language != oldWidget.language; //اذا اللغه القديمه مو نفس الجديد يعني ترو وغير لي 
-  }
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

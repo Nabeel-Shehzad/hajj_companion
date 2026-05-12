@@ -9,7 +9,7 @@ import 'ritual/location_tracking_screen.dart';
 import 'family_safety/family_safety_home_screen.dart';
 import 'chat_list_screen.dart';
 import 'settings_screen.dart';
-import '../../main.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 import '../../core/services/device_id_service.dart';
 import '../../core/services/family_group_service.dart';
 import '../../core/database/app_database.dart';
@@ -366,14 +366,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     _buildFeatureCard(
                       context,
-                      'AI Assistant',
+                      tr?.aiAssistant ?? 'AI Assistant',
                       Icons.smart_toy,
                       const Color(0xFF9C27B0),
                       () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              ChatListScreen(database: AppDatabase.instance),
+                          builder: (context) => ChatListScreen(
+                            database: AppDatabase.instance,
+                            isArabic: provider?.language == 'Arabic',
+                          ),
                         ),
                       ),
                     ),

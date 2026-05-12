@@ -6,6 +6,8 @@ import 'package:hajj_companion/core/services/location_service.dart';
 import 'package:hajj_companion/core/services/geofence_service.dart';
 import 'package:hajj_companion/core/services/ritual_guidance_service.dart';
 import 'package:hajj_companion/core/services/audio_service.dart';
+import 'package:hajj_companion/core/utils/app_localizations.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 
 class LocationTrackingScreen extends StatefulWidget {
   final String ritualType;
@@ -55,7 +57,6 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
   }
 
   Future<void> _initTracking() async {
-    // Check location permissions
     _hasPermission = await _locationService.checkPermissions();
     if (!_hasPermission) {
       if (mounted) {
@@ -64,10 +65,8 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
       return;
     }
 
-    // Load settings
     _settings = await _database.getRitualSettings();
 
-    // Start guidance
     final started = await _guidanceService.startGuidance(
       ritualType: widget.ritualType,
     );
@@ -75,12 +74,10 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
     if (started) {
       setState(() => _isTracking = true);
 
-      // Listen to position updates
       _positionSub = _locationService.positionStream.listen((position) {
         setState(() => _currentPosition = position);
       });
 
-      // Listen to guidance events
       _guidanceSub = _guidanceService.guidanceEvents.listen((event) {
         setState(() {
           _currentLocation = event.location;
@@ -91,12 +88,16 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
   }
 
   void _showPermissionDialog() {
+    final provider = LanguageProvider.of(context);
+    final tr = provider?.localizations;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Location Permission Required'),
-        content: const Text(
-          'This app needs location access to provide ritual guidance. Please enable location services.',
+        title: Text(tr?.permissionRequired ?? 'Location Permission Required'),
+        content: Text(
+          tr?.locationPermissionMsg2 ??
+              'This app needs location access to provide ritual guidance. Please enable location services.',
         ),
         actions: [
           TextButton(
@@ -104,21 +105,21 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('Go Back'),
+            child: Text(tr?.goBack ?? 'Go Back'),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
               await Geolocator.openLocationSettings();
             },
-            child: const Text('Open Settings'),
+            child: Text(tr?.openSettings ?? 'Open Settings'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDuaCard(DuaWithLocation duaWithLocation) {
+  Widget _buildDuaCard(DuaWithLocation duaWithLocation, AppLocalizations? tr) {
     final dua = duaWithLocation.dua;
     final location = duaWithLocation.location;
 
@@ -189,7 +190,6 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
               style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
             ),
 
-            // Transliteration (if available)
             if (dua.transliteration != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -203,7 +203,6 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
             // Audio Controls
             Row(
               children: [
-                // Play Arabic Button
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
@@ -212,7 +211,8 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                         setState(() => _currentlyPlayingDuaId = null);
                       } else {
                         await _audioService.playDua(dua.arabicText);
-                        setState(() => _currentlyPlayingDuaId = '${dua.id}_ar');
+                        setState(
+                            () => _currentlyPlayingDuaId = '${dua.id}_ar');
                       }
                     },
                     icon: Icon(
@@ -223,23 +223,19 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                     ),
                     label: Text(
                       _currentlyPlayingDuaId == '${dua.id}_ar'
-                          ? 'Stop'
-                          : 'Arabic',
+                          ? (tr?.stopAudio ?? 'Stop')
+                          : (tr?.playArabic ?? 'Arabic'),
                       style: const TextStyle(fontSize: 13),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green.shade600,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-
-                // Play Translation Button
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () async {
@@ -248,9 +244,9 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                         setState(() => _currentlyPlayingDuaId = null);
                       } else {
                         await _audioService.playTranslation(
-                          dua.englishTranslation,
-                        );
-                        setState(() => _currentlyPlayingDuaId = '${dua.id}_en');
+                            dua.englishTranslation);
+                        setState(
+                            () => _currentlyPlayingDuaId = '${dua.id}_en');
                       }
                     },
                     icon: Icon(
@@ -261,16 +257,14 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                     ),
                     label: Text(
                       _currentlyPlayingDuaId == '${dua.id}_en'
-                          ? 'Stop'
-                          : 'English',
+                          ? (tr?.stopAudio ?? 'Stop')
+                          : (tr?.playEnglish ?? 'English'),
                       style: const TextStyle(fontSize: 13),
                     ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.green.shade700,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                          horizontal: 12, vertical: 8),
                     ),
                   ),
                 ),
@@ -290,15 +284,17 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
     _geofenceService.dispose();
     _locationService.dispose();
     _audioService.dispose();
-    // Don't close the singleton database - it's shared across the app
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = LanguageProvider.of(context);
+    final tr = provider?.localizations;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Location Tracking'),
+        title: Text(tr?.locationTrackingTitle ?? 'Location Tracking'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -307,11 +303,13 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
           ),
         ],
       ),
-      body: !_hasPermission ? _buildPermissionDenied() : _buildTrackingView(),
+      body: !_hasPermission
+          ? _buildPermissionDenied(tr)
+          : _buildTrackingView(tr),
     );
   }
 
-  Widget _buildPermissionDenied() {
+  Widget _buildPermissionDenied(AppLocalizations? tr) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -320,16 +318,17 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
           children: [
             Icon(Icons.location_off, size: 80, color: Colors.red.shade300),
             const SizedBox(height: 24),
-            const Text(
-              'Location Permission Required',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              tr?.permissionRequired ?? 'Location Permission Required',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Please enable location services to use ritual guidance.',
+            Text(
+              tr?.enableLocationServices ??
+                  'Please enable location services to use ritual guidance.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 14),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -337,7 +336,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                 await Geolocator.openLocationSettings();
               },
               icon: const Icon(Icons.settings),
-              label: const Text('Open Settings'),
+              label: Text(tr?.openSettings ?? 'Open Settings'),
             ),
           ],
         ),
@@ -345,7 +344,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
     );
   }
 
-  Widget _buildTrackingView() {
+  Widget _buildTrackingView(AppLocalizations? tr) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -366,7 +365,9 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _isTracking ? 'Tracking Active' : 'Tracking Paused',
+                    _isTracking
+                        ? (tr?.trackingActive ?? 'Tracking Active')
+                        : (tr?.trackingPaused ?? 'Tracking Paused'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -378,7 +379,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                   if (_currentPosition != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Accuracy: ±${_currentPosition!.accuracy.toStringAsFixed(1)}m',
+                      '${tr?.accuracyLabel ?? 'Accuracy'}: ±${_currentPosition!.accuracy.toStringAsFixed(1)}m',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -402,14 +403,11 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.place,
-                          color: Colors.green.shade700,
-                          size: 28,
-                        ),
+                        Icon(Icons.place,
+                            color: Colors.green.shade700, size: 28),
                         const SizedBox(width: 12),
                         Text(
-                          'Current Location',
+                          tr?.currentLocationTitle ?? 'Current Location',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
@@ -419,26 +417,20 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                     Text(
                       _currentLocation!.nameEn,
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                          fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _currentLocation!.nameAr,
                       style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontSize: 24, fontWeight: FontWeight.bold),
                       textDirection: TextDirection.rtl,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       _currentLocation!.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
+                      style:
+                          TextStyle(fontSize: 14, color: Colors.grey.shade600),
                     ),
                   ],
                 ),
@@ -458,21 +450,18 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.menu_book,
-                          color: Colors.green.shade700,
-                          size: 28,
-                        ),
+                        Icon(Icons.menu_book,
+                            color: Colors.green.shade700, size: 28),
                         const SizedBox(width: 12),
                         Text(
-                          'Duas for This Location',
+                          tr?.duasForLocation ?? 'Duas for This Location',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ..._currentDuas.map(_buildDuaCard),
+                    ..._currentDuas.map((d) => _buildDuaCard(d, tr)),
                   ],
                 ),
               ),
@@ -480,7 +469,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
             const SizedBox(height: 16),
           ],
 
-          // Coordinates Card
+          // GPS Coordinates Card
           if (_currentPosition != null) ...[
             Card(
               elevation: 2,
@@ -490,7 +479,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'GPS Coordinates',
+                      tr?.gpsCoordinates ?? 'GPS Coordinates',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -501,16 +490,12 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                     Text(
                       'Lat: ${_currentPosition!.latitude.toStringAsFixed(6)}',
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                      ),
+                          fontSize: 12, fontFamily: 'monospace'),
                     ),
                     Text(
                       'Lon: ${_currentPosition!.longitude.toStringAsFixed(6)}',
                       style: const TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                      ),
+                          fontSize: 12, fontFamily: 'monospace'),
                     ),
                   ],
                 ),
@@ -527,7 +512,7 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Guidance Settings',
+                    tr?.guidanceSettingsTitle ?? 'Guidance Settings',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -535,24 +520,22 @@ class _LocationTrackingScreenState extends State<LocationTrackingScreen> {
                     ),
                   ),
                   SwitchListTile(
-                    title: const Text('Audio Guidance'),
+                    title: Text(tr?.audioGuidance ?? 'Audio Guidance'),
                     value: _settings?.audioEnabled ?? true,
                     onChanged: (value) async {
                       await _guidanceService.updateSettings(
-                        audioEnabled: value,
-                      );
+                          audioEnabled: value);
                       setState(() {
                         _settings = _settings?.copyWith(audioEnabled: value);
                       });
                     },
                   ),
                   SwitchListTile(
-                    title: const Text('Haptic Feedback'),
+                    title: Text(tr?.hapticFeedback ?? 'Haptic Feedback'),
                     value: _settings?.hapticEnabled ?? true,
                     onChanged: (value) async {
                       await _guidanceService.updateSettings(
-                        hapticEnabled: value,
-                      );
+                          hapticEnabled: value);
                       setState(() {
                         _settings = _settings?.copyWith(hapticEnabled: value);
                       });

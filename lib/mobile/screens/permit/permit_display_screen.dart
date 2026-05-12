@@ -6,7 +6,7 @@ import 'package:hajj_companion/core/services/permit_service.dart';
 import 'package:hajj_companion/core/services/gesture_service.dart';
 import 'package:hajj_companion/core/models/permit_model.dart';
 import 'package:hajj_companion/core/database/app_database.dart';
-import 'package:hajj_companion/main_mobile.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 import 'package:intl/intl.dart';
 import 'permit_entry_screen.dart';
 

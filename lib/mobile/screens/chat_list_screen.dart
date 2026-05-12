@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:hajj_companion/core/database/app_database.dart';
 import 'package:hajj_companion/core/services/gemini_service.dart';
+import 'package:hajj_companion/core/utils/app_localizations.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 import 'ai_chatbot_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
   final AppDatabase database;
+  final bool isArabic;
 
-  const ChatListScreen({super.key, required this.database});
+  const ChatListScreen({
+    super.key,
+    required this.database,
+    this.isArabic = false,
+  });
 
   @override
   State<ChatListScreen> createState() => _ChatListScreenState();
@@ -15,16 +22,20 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
+    final provider = LanguageProvider.of(context);
+    final tr = provider?.localizations;
+    final isArabic = provider?.language == 'Arabic';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Chat History'),
+        title: Text(tr?.aiChatHistory ?? 'AI Chat History'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
-            onPressed: _showDeleteAllDialog,
-            tooltip: 'Clear all chats',
+            onPressed: () => _showDeleteAllDialog(tr),
+            tooltip: tr?.clearAllChats ?? 'Clear all chats',
           ),
         ],
       ),
@@ -42,7 +53,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           final conversations = snapshot.data ?? [];
 
           if (conversations.isEmpty) {
-            return _buildEmptyState();
+            return _buildEmptyState(tr, isArabic);
           }
 
           return ListView.builder(
@@ -50,33 +61,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
             itemCount: conversations.length,
             itemBuilder: (context, index) {
               final conversation = conversations[index];
-              return _buildConversationCard(conversation);
+              return _buildConversationCard(conversation, tr, isArabic);
             },
           );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createNewChat,
+        onPressed: () => _createNewChat(tr, isArabic),
         backgroundColor: Colors.green,
         icon: const Icon(Icons.add_comment),
-        label: const Text('New Chat'),
+        label: Text(tr?.newChat ?? 'New Chat'),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations? tr, bool isArabic) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 100,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.chat_bubble_outline, size: 100, color: Colors.grey.shade300),
           const SizedBox(height: 24),
           Text(
-            'No conversations yet',
+            tr?.noConversationsYet ?? 'No conversations yet',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -85,19 +92,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Start a new chat to ask about\nHajj and Umrah',
+            isArabic
+                ? 'ابدأ محادثة جديدة للسؤال عن\nالحج والعمرة'
+                : 'Start a new chat to ask about\nHajj and Umrah',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
-            onPressed: _createNewChat,
+            onPressed: () => _createNewChat(tr, isArabic),
             icon: const Icon(Icons.add),
-            label: const Text('Start First Chat'),
+            label: Text(tr?.startFirstChat ?? 'Start First Chat'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
         ],
@@ -105,8 +115,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
-  Widget _buildConversationCard(ChatConversation conversation) {
-    final formattedDate = _formatDate(conversation.updatedAt);
+  Widget _buildConversationCard(
+      ChatConversation conversation, AppLocalizations? tr, bool isArabic) {
+    final formattedDate = _formatDate(conversation.updatedAt, tr, isArabic);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -128,87 +139,96 @@ class _ChatListScreenState extends State<ChatListScreen> {
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'rename') {
-              _showRenameDialog(conversation);
+              _showRenameDialog(conversation, tr);
             } else if (value == 'delete') {
-              _showDeleteDialog(conversation);
+              _showDeleteDialog(conversation, tr);
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'rename',
               child: Row(
                 children: [
-                  Icon(Icons.edit, size: 20),
-                  SizedBox(width: 12),
-                  Text('Rename'),
+                  const Icon(Icons.edit, size: 20),
+                  const SizedBox(width: 12),
+                  Text(tr?.rename ?? 'Rename'),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: Row(
                 children: [
-                  Icon(Icons.delete, size: 20, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
+                  const Icon(Icons.delete, size: 20, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Text(
+                    tr?.delete ?? 'Delete',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ],
               ),
             ),
           ],
         ),
-        onTap: () => _openChat(conversation.id),
+        onTap: () => _openChat(conversation.id, isArabic),
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(
+      DateTime date, AppLocalizations? tr, bool isArabic) {
     final now = DateTime.now();
     final difference = now.difference(date);
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
 
     if (difference.inDays == 0) {
-      final hour = date.hour.toString().padLeft(2, '0');
-      final minute = date.minute.toString().padLeft(2, '0');
-      return 'Today at $hour:$minute';
+      return '${tr?.todayAt ?? 'Today at'} $hour:$minute';
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return tr?.yesterday ?? 'Yesterday';
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
+      return isArabic
+          ? '${difference.inDays} ${tr?.daysAgoLabel ?? 'days ago'}'
+          : '${difference.inDays} ${tr?.daysAgoLabel ?? 'days ago'}';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
   }
 
-  void _createNewChat() async {
-    final controller = TextEditingController(text: 'New Chat');
+  void _createNewChat(AppLocalizations? tr, bool isArabic) async {
+    final controller =
+        TextEditingController(text: tr?.newChat ?? 'New Chat');
 
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('New Chat'),
+        title: Text(tr?.newChat ?? 'New Chat'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Chat Title',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: tr?.chatTitle ?? 'Chat Title',
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr?.cancel ?? 'Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Create'),
+            child: Text(tr?.save ?? 'Create'),
           ),
         ],
       ),
     );
 
     if (result != null && result.isNotEmpty && mounted) {
-      final geminiService = GeminiService(widget.database);
-      final conversationId = await geminiService.createNewConversation(result);
+      final geminiService =
+          GeminiService(widget.database, isArabic: isArabic);
+      final conversationId =
+          await geminiService.createNewConversation(result);
 
       if (mounted) {
         Navigator.push(
@@ -217,6 +237,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
             builder: (context) => AIChatbotScreen(
               database: widget.database,
               conversationId: conversationId,
+              isArabic: isArabic,
             ),
           ),
         );
@@ -224,41 +245,42 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
-  void _openChat(int conversationId) {
+  void _openChat(int conversationId, bool isArabic) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AIChatbotScreen(
           database: widget.database,
           conversationId: conversationId,
+          isArabic: isArabic,
         ),
       ),
     );
   }
 
-  void _showRenameDialog(ChatConversation conversation) async {
+  void _showRenameDialog(ChatConversation conversation, AppLocalizations? tr) async {
     final controller = TextEditingController(text: conversation.title);
 
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename Chat'),
+        title: Text(tr?.renameChat ?? 'Rename Chat'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Chat Title',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: tr?.chatTitle ?? 'Chat Title',
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr?.cancel ?? 'Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Rename'),
+            child: Text(tr?.rename ?? 'Rename'),
           ),
         ],
       ),
@@ -269,23 +291,23 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
-  void _showDeleteDialog(ChatConversation conversation) async {
+  void _showDeleteDialog(ChatConversation conversation, AppLocalizations? tr) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Chat'),
+        title: Text(tr?.deleteChat ?? 'Delete Chat'),
         content: Text(
-          'Are you sure you want to delete "${conversation.title}"?',
+          '"${conversation.title}"${tr?.deleteConversationConfirm != null ? '\n${tr!.deleteConversationConfirm}' : ' — Are you sure?'}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(tr?.cancel ?? 'Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(tr?.delete ?? 'Delete'),
           ),
         ],
       ),
@@ -296,23 +318,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
   }
 
-  void _showDeleteAllDialog() async {
+  void _showDeleteAllDialog(AppLocalizations? tr) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear All Chats'),
-        content: const Text(
-          'Are you sure you want to delete all conversations? This cannot be undone.',
+        title: Text(tr?.clearAllChats ?? 'Clear All Chats'),
+        content: Text(
+          tr?.clearAllConfirm ??
+              'Are you sure you want to delete all conversations? This cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(tr?.cancel ?? 'Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Clear All'),
+            child: Text(tr?.clearAll ?? 'Clear All'),
           ),
         ],
       ),

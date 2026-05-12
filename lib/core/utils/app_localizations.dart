@@ -201,4 +201,140 @@ class AppLocalizations {
       languageCode == 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy';
   String get helpSupport =>
       languageCode == 'ar' ? 'المساعدة والدعم' : 'Help & Support';
+
+  // AI Chat
+  String get aiAssistant =>
+      languageCode == 'ar' ? 'المساعد الذكي' : 'AI Assistant';
+  String get aiChatHistory => languageCode == 'ar'
+      ? 'سجل محادثات الذكاء الاصطناعي'
+      : 'AI Chat History';
+  String get newChat =>
+      languageCode == 'ar' ? 'محادثة جديدة' : 'New Chat';
+  String get noConversationsYet =>
+      languageCode == 'ar' ? 'لا توجد محادثات بعد' : 'No conversations yet';
+  String get startFirstChat =>
+      languageCode == 'ar' ? 'ابدأ أول محادثة' : 'Start First Chat';
+  String get startConversation =>
+      languageCode == 'ar' ? 'ابدأ محادثة' : 'Start a conversation';
+  String get askAboutHajjUmrah => languageCode == 'ar'
+      ? 'اسأل عن الحج أو العمرة...'
+      : 'Ask about Hajj or Umrah...';
+  String get askMeAnything => languageCode == 'ar'
+      ? 'اسألني أي شيء عن الحج والعمرة!'
+      : 'Ask me anything about Hajj and Umrah!';
+  String get thinking =>
+      languageCode == 'ar' ? 'جاري التفكير...' : 'Thinking...';
+  String get sampleQuestionsLabel =>
+      languageCode == 'ar' ? 'أسئلة نموذجية:' : 'Sample Questions:';
+  String get clearAllChats =>
+      languageCode == 'ar' ? 'مسح جميع المحادثات' : 'Clear all chats';
+  String get deleteChat =>
+      languageCode == 'ar' ? 'حذف المحادثة' : 'Delete Chat';
+  String get renameChat =>
+      languageCode == 'ar' ? 'إعادة تسمية المحادثة' : 'Rename Chat';
+  String get chatTitle =>
+      languageCode == 'ar' ? 'عنوان المحادثة' : 'Chat Title';
+  String get deleteConversationConfirm => languageCode == 'ar'
+      ? 'هل أنت متأكد من حذف هذه المحادثة؟ لا يمكن التراجع عن هذا الإجراء.'
+      : 'Are you sure you want to delete this conversation? This cannot be undone.';
+  String get clearAllConfirm => languageCode == 'ar'
+      ? 'هل أنت متأكد من حذف جميع المحادثات؟ لا يمكن التراجع عن هذا الإجراء.'
+      : 'Are you sure you want to delete all conversations? This cannot be undone.';
+  String get clearAll =>
+      languageCode == 'ar' ? 'مسح الكل' : 'Clear All';
+  String get todayAt =>
+      languageCode == 'ar' ? 'اليوم في' : 'Today at';
+  String get yesterday =>
+      languageCode == 'ar' ? 'أمس' : 'Yesterday';
+  String get daysAgoLabel =>
+      languageCode == 'ar' ? 'أيام مضت' : 'days ago';
+  String get rename =>
+      languageCode == 'ar' ? 'إعادة التسمية' : 'Rename';
+
+  // Ritual Selection
+  String get ritualGuidanceSettings => languageCode == 'ar'
+      ? 'إعدادات دليل المناسك'
+      : 'Ritual Guidance Settings';
+  String get performingRitualFor =>
+      languageCode == 'ar' ? 'أداء المناسك لـ' : 'Performing Ritual For';
+  String get forMyself =>
+      languageCode == 'ar' ? 'لنفسي' : 'For Myself';
+  String get onBehalfOfSomeone =>
+      languageCode == 'ar' ? 'نيابة عن شخص آخر' : 'On Behalf of Someone';
+  String get standardDuasDesc => languageCode == 'ar'
+      ? 'الأدعية المعيارية للمناسك الشخصية'
+      : 'Standard duas for personal rituals';
+  String get modifiedDuasDesc => languageCode == 'ar'
+      ? 'الأدعية المعدلة للمناسك بالنيابة'
+      : 'Modified duas for proxy rituals';
+  String get startGPSGuidance =>
+      languageCode == 'ar' ? 'بدء التوجيه بالـ GPS' : 'Start GPS Guidance';
+  String get locationAutoDetect => languageCode == 'ar'
+      ? 'سيقوم التطبيق تلقائياً باكتشاف موقعك وتوفير الأدعية المناسبة'
+      : 'The app will automatically detect your location and provide appropriate duas';
+  String get locationAutoDetect2 => languageCode == 'ar'
+      ? 'سيكتشف موقعك تلقائياً ويعرض الأدعية المناسبة عند المواقع المقدسة'
+      : 'Your location will automatically detect nearby holy sites and display appropriate duas';
+
+  // Location Tracking
+  String get locationTrackingTitle =>
+      languageCode == 'ar' ? 'تتبع الموقع' : 'Location Tracking';
+  String get trackingActive =>
+      languageCode == 'ar' ? 'التتبع نشط' : 'Tracking Active';
+  String get trackingPaused =>
+      languageCode == 'ar' ? 'التتبع متوقف مؤقتاً' : 'Tracking Paused';
+  String get duasForLocation =>
+      languageCode == 'ar' ? 'أدعية هذا الموقع' : 'Duas for This Location';
+  String get gpsCoordinates =>
+      languageCode == 'ar' ? 'إحداثيات GPS' : 'GPS Coordinates';
+  String get accuracyLabel =>
+      languageCode == 'ar' ? 'الدقة' : 'Accuracy';
+  String get currentLocationTitle =>
+      languageCode == 'ar' ? 'الموقع الحالي' : 'Current Location';
+  String get enableLocationServices => languageCode == 'ar'
+      ? 'الرجاء تفعيل خدمات الموقع لاستخدام التوجيه في المناسك.'
+      : 'Please enable location services to use ritual guidance.';
+  String get openSettings =>
+      languageCode == 'ar' ? 'فتح الإعدادات' : 'Open Settings';
+  String get stopAudio =>
+      languageCode == 'ar' ? 'إيقاف' : 'Stop';
+  String get playArabic =>
+      languageCode == 'ar' ? 'عربي' : 'Arabic';
+  String get playEnglish =>
+      languageCode == 'ar' ? 'إنجليزي' : 'English';
+  String get guidanceSettingsTitle =>
+      languageCode == 'ar' ? 'إعدادات التوجيه' : 'Guidance Settings';
+  String get locationPermissionMsg2 => languageCode == 'ar'
+      ? 'هذا التطبيق يحتاج إلى إذن الموقع لتوفير التوجيه في المناسك. الرجاء تفعيل خدمات الموقع.'
+      : 'This app needs location access to provide ritual guidance. Please enable location services.';
+  String get goBack =>
+      languageCode == 'ar' ? 'الرجوع' : 'Go Back';
+
+  // Family Safety
+  String get keepFamilySafe =>
+      languageCode == 'ar' ? 'حافظ على سلامة عائلتك' : 'Keep Your Family Safe';
+  String get familySafetyDesc => languageCode == 'ar'
+      ? 'شارك موقعك مع أفراد عائلتك واحصل على تنبيه عند تجاوز الأطفال للمسافة الآمنة.'
+      : 'Share your location with family members and get alerted if children exceed safe distances.';
+  String get joinExistingGroup =>
+      languageCode == 'ar' ? 'الانضمام إلى مجموعة موجودة' : 'Join Existing Group';
+  String get viewFamilyLocations =>
+      languageCode == 'ar' ? 'عرض مواقع العائلة' : 'View Family Locations';
+  String get leaveGroup =>
+      languageCode == 'ar' ? 'مغادرة المجموعة' : 'Leave Group';
+  String get leaveGroupConfirm => languageCode == 'ar'
+      ? 'هل أنت متأكد من مغادرة هذه المجموعة العائلية؟ ستحتاج إلى رمز انضمام للعودة.'
+      : 'Are you sure you want to leave this family group? You will need a join code to rejoin.';
+  String get joinCodeLabel =>
+      languageCode == 'ar' ? 'رمز الانضمام' : 'Join Code';
+  String get adminBadge =>
+      languageCode == 'ar' ? 'مدير' : 'ADMIN';
+  String get joinCodeCopied =>
+      languageCode == 'ar' ? 'تم نسخ رمز الانضمام!' : 'Join code copied to clipboard!';
+  String get showQrCode =>
+      languageCode == 'ar' ? 'عرض رمز QR' : 'Show QR code';
+  String get copyJoinCodeLabel =>
+      languageCode == 'ar' ? 'نسخ رمز الانضمام' : 'Copy join code';
+  String get leave =>
+      languageCode == 'ar' ? 'مغادرة' : 'Leave';
 }

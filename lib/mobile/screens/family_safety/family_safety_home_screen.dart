@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:hajj_companion/core/models/family_group.dart';
 import 'package:hajj_companion/core/services/device_id_service.dart';
 import 'package:hajj_companion/core/services/family_group_service.dart';
+import 'package:hajj_companion/core/utils/app_localizations.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 import 'create_group_screen.dart';
 import 'join_group_screen.dart';
 import 'family_members_screen.dart';
@@ -34,9 +36,7 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
 
   Future<void> _loadGroupStatus() async {
     setState(() => _isLoading = true);
-
     final group = await widget.groupService.getCurrentGroup();
-
     setState(() {
       _currentGroup = group;
       _isLoading = false;
@@ -45,21 +45,24 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = LanguageProvider.of(context);
+    final tr = provider?.localizations;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Family Safety'),
+        title: Text(tr?.familySafetyTitle ?? 'Family Safety'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _currentGroup != null
-          ? _buildGroupView()
-          : _buildNoGroupView(),
+              ? _buildGroupView(tr)
+              : _buildNoGroupView(tr),
     );
   }
 
-  Widget _buildNoGroupView() {
+  Widget _buildNoGroupView(AppLocalizations? tr) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -68,15 +71,16 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
           children: [
             const Icon(Icons.family_restroom, size: 80, color: Colors.green),
             const SizedBox(height: 24),
-            const Text(
-              'Keep Your Family Safe',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              tr?.keepFamilySafe ?? 'Keep Your Family Safe',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Share your location with family members and get alerted if children exceed safe distances.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            Text(
+              tr?.familySafetyDesc ??
+                  'Share your location with family members and get alerted if children exceed safe distances.',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 48),
@@ -85,7 +89,7 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
               child: ElevatedButton.icon(
                 onPressed: _navigateToCreateGroup,
                 icon: const Icon(Icons.add),
-                label: const Text('Create Family Group'),
+                label: Text(tr?.createFamilyGroup ?? 'Create Family Group'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
@@ -99,7 +103,7 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
               child: OutlinedButton.icon(
                 onPressed: _navigateToJoinGroup,
                 icon: const Icon(Icons.group_add),
-                label: const Text('Join Existing Group'),
+                label: Text(tr?.joinExistingGroup ?? 'Join Existing Group'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.green,
                   side: const BorderSide(color: Colors.green),
@@ -113,7 +117,7 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
     );
   }
 
-  Widget _buildGroupView() {
+  Widget _buildGroupView(AppLocalizations? tr) {
     final deviceId = widget.deviceIdService.getDeviceId();
     final isAdmin = _currentGroup!.adminDeviceId == deviceId;
 
@@ -144,16 +148,14 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
                       if (isAdmin)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.green.shade100,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'ADMIN',
-                            style: TextStyle(
+                          child: Text(
+                            tr?.adminBadge ?? 'ADMIN',
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: Colors.green,
@@ -167,9 +169,10 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Text(
-                        'Join Code: ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Text(
+                        '${tr?.joinCodeLabel ?? 'Join Code'}: ',
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
                         _currentGroup!.joinCode,
@@ -183,12 +186,12 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
                       IconButton(
                         icon: const Icon(Icons.qr_code),
                         onPressed: _showQrCode,
-                        tooltip: 'Show QR code',
+                        tooltip: tr?.showQrCode ?? 'Show QR code',
                       ),
                       IconButton(
                         icon: const Icon(Icons.copy),
-                        onPressed: _copyJoinCode,
-                        tooltip: 'Copy join code',
+                        onPressed: () => _copyJoinCode(tr),
+                        tooltip: tr?.copyJoinCodeLabel ?? 'Copy join code',
                       ),
                     ],
                   ),
@@ -202,7 +205,8 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
             child: ElevatedButton.icon(
               onPressed: _navigateToMembersScreen,
               icon: const Icon(Icons.location_on),
-              label: const Text('View Family Locations'),
+              label:
+                  Text(tr?.viewFamilyLocations ?? 'View Family Locations'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
@@ -214,9 +218,9 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: _confirmLeaveGroup,
+              onPressed: () => _confirmLeaveGroup(tr),
               icon: const Icon(Icons.exit_to_app),
-              label: const Text('Leave Group'),
+              label: Text(tr?.leaveGroup ?? 'Leave Group'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red),
@@ -239,10 +243,7 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
         ),
       ),
     );
-
-    if (result == true) {
-      _loadGroupStatus();
-    }
+    if (result == true) _loadGroupStatus();
   }
 
   Future<void> _navigateToJoinGroup() async {
@@ -255,10 +256,7 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
         ),
       ),
     );
-
-    if (result == true) {
-      _loadGroupStatus();
-    }
+    if (result == true) _loadGroupStatus();
   }
 
   Future<void> _navigateToMembersScreen() async {
@@ -273,24 +271,24 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
     );
   }
 
-  Future<void> _confirmLeaveGroup() async {
+  Future<void> _confirmLeaveGroup(AppLocalizations? tr) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave Group'),
-        content: const Text(
-          'Are you sure you want to leave this family group? '
-          'You will need a join code to rejoin.',
+        title: Text(tr?.leaveGroup ?? 'Leave Group'),
+        content: Text(
+          tr?.leaveGroupConfirm ??
+              'Are you sure you want to leave this family group? You will need a join code to rejoin.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(tr?.cancel ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Leave'),
+            child: Text(tr?.leave ?? 'Leave'),
           ),
         ],
       ),
@@ -304,7 +302,6 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
 
   void _showQrCode() {
     if (_currentGroup == null) return;
-
     showDialog(
       context: context,
       builder: (context) => QrCodeDisplayDialog(
@@ -314,21 +311,20 @@ class _FamilySafetyHomeScreenState extends State<FamilySafetyHomeScreen> {
     );
   }
 
-  void _copyJoinCode() {
+  void _copyJoinCode(AppLocalizations? tr) {
     if (_currentGroup == null) return;
-
     Clipboard.setData(ClipboardData(text: _currentGroup!.joinCode));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 12),
-            Text('Join code copied to clipboard!'),
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(tr?.joinCodeCopied ?? 'Join code copied to clipboard!'),
           ],
         ),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

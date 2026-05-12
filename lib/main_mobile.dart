@@ -11,31 +11,11 @@ import 'core/services/data_seed_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/database/app_database.dart';
 import 'core/utils/app_localizations.dart';
+import 'core/providers/language_provider.dart';
+export 'core/providers/language_provider.dart';
 
 // Global navigator key for navigation from anywhere
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-// Global access to current language
-class LanguageProvider extends InheritedWidget {
-  final String language;
-  final AppLocalizations localizations;
-
-  const LanguageProvider({
-    super.key,
-    required this.language,
-    required this.localizations,
-    required super.child,
-  });
-
-  static LanguageProvider? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<LanguageProvider>();
-  }
-
-  @override
-  bool updateShouldNotify(LanguageProvider oldWidget) {
-    return language != oldWidget.language;
-  }
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

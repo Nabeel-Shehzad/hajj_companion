@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hajj_companion/core/services/permit_service.dart';
 import 'package:hajj_companion/core/models/permit_model.dart';
 import 'package:hajj_companion/core/database/app_database.dart';
-import 'package:hajj_companion/main_mobile.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 import 'permit_display_screen.dart';
 
 class PermitEntryScreen extends StatefulWidget {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' show Value;
 import 'location_tracking_screen.dart';
 import 'package:hajj_companion/core/database/app_database.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 
 class RitualSelectionScreen extends StatefulWidget {
   const RitualSelectionScreen({super.key});
@@ -33,15 +34,17 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
 
   @override
   void dispose() {
-    // Don't close the singleton database - it's shared across the app
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = LanguageProvider.of(context);
+    final tr = provider?.localizations;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ritual Guidance Settings'),
+        title: Text(tr?.ritualGuidanceSettings ?? 'Ritual Guidance Settings'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -60,7 +63,8 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Your location will automatically detect nearby holy sites and display appropriate duas',
+                        tr?.locationAutoDetect2 ??
+                            'Your location will automatically detect nearby holy sites and display appropriate duas',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.blue.shade900,
@@ -90,7 +94,7 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'Performing Ritual For',
+                          tr?.performingRitualFor ?? 'Performing Ritual For',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
@@ -98,9 +102,10 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                     ),
                     const SizedBox(height: 20),
                     RadioListTile<String>(
-                      title: const Text('For Myself'),
-                      subtitle: const Text(
-                        'Standard duas for personal rituals',
+                      title: Text(tr?.forMyself ?? 'For Myself'),
+                      subtitle: Text(
+                        tr?.standardDuasDesc ??
+                            'Standard duas for personal rituals',
                       ),
                       value: 'self',
                       groupValue: _ritualType,
@@ -112,8 +117,11 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                       activeColor: Colors.green,
                     ),
                     RadioListTile<String>(
-                      title: const Text('On Behalf of Someone'),
-                      subtitle: const Text('Modified duas for proxy rituals'),
+                      title: Text(
+                          tr?.onBehalfOfSomeone ?? 'On Behalf of Someone'),
+                      subtitle: Text(
+                          tr?.modifiedDuasDesc ??
+                              'Modified duas for proxy rituals'),
                       value: 'proxy',
                       groupValue: _ritualType,
                       onChanged: (value) {
@@ -132,11 +140,10 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
             // Start Tracking Button
             ElevatedButton.icon(
               onPressed: () async {
-                // Save settings before starting
                 await _database.saveRitualSettings(
                   RitualSettingsCompanion.insert(
                     ritualType: _ritualType,
-                    selectedRitual: 'auto', // Auto-detected by GPS
+                    selectedRitual: 'auto',
                     audioEnabled: Value(_savedSettings?.audioEnabled ?? true),
                     hapticEnabled: Value(_savedSettings?.hapticEnabled ?? true),
                     audioVolume: Value(_savedSettings?.audioVolume ?? 80),
@@ -149,13 +156,13 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                   MaterialPageRoute(
                     builder: (context) => LocationTrackingScreen(
                       ritualType: _ritualType,
-                      selectedRitual: 'auto', // GPS determines ritual
+                      selectedRitual: 'auto',
                     ),
                   ),
                 );
               },
               icon: const Icon(Icons.navigation, size: 24),
-              label: const Text('Start GPS Guidance'),
+              label: Text(tr?.startGPSGuidance ?? 'Start GPS Guidance'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 textStyle: const TextStyle(fontSize: 18),
@@ -174,7 +181,8 @@ class _RitualSelectionScreenState extends State<RitualSelectionScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'The app will automatically detect your location and provide appropriate duas',
+                        tr?.locationAutoDetect ??
+                            'The app will automatically detect your location and provide appropriate duas',
                         style: TextStyle(
                           color: Colors.blue.shade900,
                           fontSize: 13,

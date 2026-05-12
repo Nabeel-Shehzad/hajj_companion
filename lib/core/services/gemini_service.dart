@@ -6,14 +6,16 @@ import '../database/app_database.dart';
 class GeminiService {
   static const String _apiKey = 'AIzaSyAA6Fk28ENg6rUBdXUFh72b9XAA0HYR3Jc';
 
-  late final GenerativeModel _model;// The Gemini model instance
+  late final GenerativeModel _model;
   ChatSession? _chatSession;
   final AppDatabase _database;
-  int? _currentConversationId;// Track the current conversation ID for database operations
+  final bool isArabic;
+  int? _currentConversationId;
 
-  /// System prompt to restrict AI responses to Hajj and Umrah topics only
+  /// System prompt restricts AI to Hajj/Umrah topics only,
+  /// and instructs it to respond in the user's language.
   static const String _systemPrompt = '''
-You are a knowledgeable Islamic scholar and guide specializing in Hajj and Umrah pilgrimages. 
+You are a knowledgeable Islamic scholar and guide specializing in Hajj and Umrah pilgrimages.
 Your role is to provide accurate, helpful information ONLY about:
 - Hajj rituals, rules, and procedures
 - Umrah rituals, rules, and procedures
@@ -24,6 +26,13 @@ Your role is to provide accurate, helpful information ONLY about:
 - Duas and prayers related to Hajj/Umrah
 - Ihram rules and requirements
 - Tawaf, Sa'i, and other rituals
+
+LANGUAGE INSTRUCTIONS (Very Important):
+- Always detect the language the user is writing in.
+- If the user writes in Arabic, respond ENTIRELY in Arabic.
+- If the user writes in English, respond in English.
+- Never mix languages in a single response.
+- Match the user's language in every reply.
 
 IMPORTANT RESTRICTIONS:
 - If asked about topics unrelated to Hajj or Umrah, politely decline and remind the user you only assist with Hajj and Umrah questions
@@ -41,18 +50,17 @@ Response format:
 - Write responses in plain text format only
 ''';
 
-  GeminiService(this._database) {
+  GeminiService(this._database, {this.isArabic = false}) {
     _initializeModel();
   }
 
-  /// Initialize the Gemini model with safety settings
   void _initializeModel() {
     _model = GenerativeModel(
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash',
       apiKey: _apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.7,
-        topK: 40,// Limits the model to consider only the top 40 most likely next tokens, which helps improve response quality and relevance.
+        topK: 40,
         topP: 0.95,
         maxOutputTokens: 4096,
       ),
@@ -72,7 +80,9 @@ Response format:
         Content.text(_systemPrompt),
         Content.model([
           TextPart(
-            'I understand. I will only answer questions about Hajj and Umrah pilgrimages. How can I help you today?',
+            isArabic
+                ? 'أفهم. سأجيب فقط على الأسئلة المتعلقة بالحج والعمرة. كيف يمكنني مساعدتك اليوم؟'
+                : 'I understand. I will only answer questions about Hajj and Umrah pilgrimages. How can I help you today?',
           ),
         ]),
       ],
@@ -82,19 +92,21 @@ Response format:
   /// Load chat session from database
   Future<void> loadChatFromDatabase(int conversationId) async {
     _currentConversationId = conversationId;
-    final messages = await _database.getMessagesForConversation(conversationId);
+    final messages =
+        await _database.getMessagesForConversation(conversationId);
 
     if (messages.isEmpty) {
       startNewChat();
       return;
     }
 
-    // Build chat history from saved messages
     final history = <Content>[
       Content.text(_systemPrompt),
       Content.model([
         TextPart(
-          'I understand. I will only answer questions about Hajj and Umrah pilgrimages. How can I help you today?',
+          isArabic
+              ? 'أفهم. سأجيب فقط على الأسئلة المتعلقة بالحج والعمرة. كيف يمكنني مساعدتك اليوم؟'
+              : 'I understand. I will only answer questions about Hajj and Umrah pilgrimages. How can I help you today?',
         ),
       ]),
     ];
@@ -116,12 +128,13 @@ Response format:
     _currentConversationId = id;
     startNewChat();
 
-    // Save welcome message
+    // Save welcome message in the correct language
     await _database.insertMessage(
       ChatMessagesCompanion.insert(
         conversationId: id,
-        content:
-            'Assalamu Alaikum! I\'m your Hajj & Umrah AI assistant. How can I help you today?',
+        content: isArabic
+            ? 'السلام عليكم! أنا مساعدك الذكي للحج والعمرة. كيف يمكنني مساعدتك اليوم؟'
+            : 'Assalamu Alaikum! I\'m your Hajj & Umrah AI assistant. How can I help you today?',
         isUser: false,
         timestamp: Value(DateTime.now()),
       ),
@@ -133,16 +146,15 @@ Response format:
   /// Send a message and get AI response
   Future<String> sendMessage(String message) async {
     try {
-      // Start a new chat if one doesn't exist
       if (_chatSession == null) {
         if (_currentConversationId == null) {
-          await createNewConversation('New Chat');
+          await createNewConversation(
+              isArabic ? 'محادثة جديدة' : 'New Chat');
         } else {
           await loadChatFromDatabase(_currentConversationId!);
         }
       }
 
-      // Save user message
       if (_currentConversationId != null) {
         await _database.insertMessage(
           ChatMessagesCompanion.insert(
@@ -154,11 +166,11 @@ Response format:
         );
       }
 
-      final response = await _chatSession!.sendMessage(Content.text(message));
+      final response =
+          await _chatSession!.sendMessage(Content.text(message));
       final responseText =
-          response.text ?? 'Sorry, I could not generate a response.';
+          response.text ?? (isArabic ? 'عذراً، لم أتمكن من توليد رد.' : 'Sorry, I could not generate a response.');
 
-      // Save AI response
       if (_currentConversationId != null) {
         await _database.insertMessage(
           ChatMessagesCompanion.insert(
@@ -173,27 +185,26 @@ Response format:
       return responseText;
     } catch (e) {
       if (e.toString().contains('SAFETY')) {
-        return 'I apologize, but I cannot respond to that message. Please ask questions related to Hajj or Umrah pilgrimages.';
+        return isArabic
+            ? 'عذراً، لا يمكنني الرد على هذه الرسالة. يرجى طرح أسئلة تتعلق بالحج أو العمرة.'
+            : 'I apologize, but I cannot respond to that message. Please ask questions related to Hajj or Umrah pilgrimages.';
       }
       return 'Error: ${e.toString()}';
     }
   }
 
-  /// Clear chat history and start fresh
   void clearHistory() {
     _chatSession = null;
     _currentConversationId = null;
   }
 
-  /// Switch to a different conversation
   Future<void> switchConversation(int conversationId) async {
     await loadChatFromDatabase(conversationId);
   }
 
-  /// Get current conversation ID
   int? get currentConversationId => _currentConversationId;
 
-  /// Get sample questions for Hajj
+  /// English sample questions
   List<String> getSampleHajjQuestions() {
     return [
       'What are the main steps of Hajj?',
@@ -205,7 +216,18 @@ Response format:
     ];
   }
 
-  /// Get sample questions for Umrah
+  /// Arabic sample questions
+  List<String> getSampleHajjQuestionsArabic() {
+    return [
+      'ما هي خطوات الحج الرئيسية؟',
+      'متى يجب أن أدخل في الإحرام؟',
+      'ما هي أهمية يوم عرفة؟',
+      'كم مرة يجب أن أؤدي الطواف؟',
+      'ما الأدعية التي يجب قراءتها أثناء الطواف؟',
+      'ما هي المحظورات أثناء الإحرام؟',
+    ];
+  }
+
   List<String> getSampleUmrahQuestions() {
     return [
       'What are the steps of Umrah?',

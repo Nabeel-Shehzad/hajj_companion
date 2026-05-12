@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:hajj_companion/core/database/app_database.dart';
 import 'package:hajj_companion/core/services/gemini_service.dart';
+import 'package:hajj_companion/core/utils/app_localizations.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 
 class AIChatbotScreen extends StatefulWidget {
   final AppDatabase database;
   final int? conversationId;
+  final bool isArabic;
 
   const AIChatbotScreen({
     super.key,
     required this.database,
     this.conversationId,
+    this.isArabic = false,
   });
 
   @override
@@ -28,7 +32,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   @override
   void initState() {
     super.initState();
-    _geminiService = GeminiService(widget.database);
+    _geminiService = GeminiService(widget.database, isArabic: widget.isArabic);
     _initializeConversation();
   }
 
@@ -36,18 +40,16 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     if (widget.conversationId != null) {
       _currentConversationId = widget.conversationId;
       await _geminiService.loadChatFromDatabase(widget.conversationId!);
-      final conv = await widget.database.getConversation(
-        widget.conversationId!,
-      );
+      final conv =
+          await widget.database.getConversation(widget.conversationId!);
       if (conv != null && mounted) {
         setState(() {
           _conversationTitle = conv.title;
         });
       }
     } else {
-      // Create a new conversation
       _currentConversationId = await _geminiService.createNewConversation(
-        'New Chat',
+        widget.isArabic ? 'محادثة جديدة' : 'New Chat',
       );
       setState(() {
         _showSampleQuestions = true;
@@ -75,14 +77,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
 
     try {
       await _geminiService.sendMessage(text);
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       _scrollToBottom();
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
@@ -103,30 +101,33 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     });
   }
 
-  void _clearChat() {
+  void _clearChat(AppLocalizations? tr) {
     if (_currentConversationId == null) return;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Chat'),
-        content: const Text(
-          'Are you sure you want to delete this conversation? This cannot be undone.',
+        title: Text(tr?.deleteChat ?? 'Delete Chat'),
+        content: Text(
+          tr?.deleteConversationConfirm ??
+              'Are you sure you want to delete this conversation? This cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(tr?.cancel ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await widget.database.deleteConversation(_currentConversationId!);
-              if (mounted) {
-                Navigator.pop(context);
-              }
+              await widget.database
+                  .deleteConversation(_currentConversationId!);
+              if (mounted) Navigator.pop(context);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              tr?.delete ?? 'Delete',
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -135,6 +136,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = LanguageProvider.of(context);
+    final tr = provider?.localizations;
+    final isArabic = provider?.language == 'Arabic';
+
     if (_currentConversationId == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -147,44 +152,39 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            onPressed: _clearChat,
-            tooltip: 'Delete chat',
+            onPressed: () => _clearChat(tr),
+            tooltip: tr?.deleteChat ?? 'Delete chat',
           ),
         ],
       ),
       body: Column(
         children: [
-          // Header with info
+          // Header info banner
           Container(
             padding: const EdgeInsets.all(12),
             color: Colors.green.shade50,
             child: Row(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  color: Colors.green.shade700,
-                  size: 20,
-                ),
+                Icon(Icons.info_outline,
+                    color: Colors.green.shade700, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Ask me anything about Hajj and Umrah!',
+                    tr?.askMeAnything ??
+                        'Ask me anything about Hajj and Umrah!',
                     style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontSize: 13,
-                    ),
+                        color: Colors.green.shade700, fontSize: 13),
                   ),
                 ),
               ],
             ),
           ),
 
-          // Messages list
+          // Messages
           Expanded(
             child: StreamBuilder<List<ChatMessage>>(
-              stream: widget.database.watchMessagesForConversation(
-                _currentConversationId!,
-              ),
+              stream: widget.database
+                  .watchMessagesForConversation(_currentConversationId!),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -193,10 +193,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
-                  return _buildEmptyState();
+                  return _buildEmptyState(tr, isArabic);
                 }
 
-                // Scroll to bottom when new messages arrive
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _scrollToBottom();
                 });
@@ -206,7 +205,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    return _buildMessageBubble(messages[index]);
+                    return _buildMessageBubble(messages[index], isArabic);
                   },
                 );
               },
@@ -214,7 +213,8 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           ),
 
           // Sample questions
-          if (_showSampleQuestions && !_isLoading) _buildSampleQuestions(),
+          if (_showSampleQuestions && !_isLoading)
+            _buildSampleQuestions(tr, isArabic),
 
           // Loading indicator
           if (_isLoading)
@@ -229,7 +229,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Thinking...',
+                    tr?.thinking ?? 'Thinking...',
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                 ],
@@ -237,25 +237,22 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
             ),
 
           // Input field
-          _buildInputField(),
+          _buildInputField(tr),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations? tr, bool isArabic) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 80,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.chat_bubble_outline,
+              size: 80, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
-            'Start a conversation',
+            tr?.startConversation ?? 'Start a conversation',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey.shade600,
@@ -264,7 +261,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Ask me about Hajj or Umrah',
+            isArabic
+                ? 'اسألني عن الحج أو العمرة'
+                : 'Ask me about Hajj or Umrah',
             style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
         ],
@@ -272,12 +271,16 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
+  Widget _buildMessageBubble(ChatMessage message, bool isArabic) {
+    // Detect if message content is Arabic for RTL alignment
+    final isContentArabic = _isArabicText(message.content);
+
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
@@ -286,7 +289,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: isContentArabic
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Text(
               message.content,
@@ -294,6 +299,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 color: message.isUser ? Colors.white : Colors.black87,
                 fontSize: 15,
               ),
+              textAlign: isContentArabic ? TextAlign.right : TextAlign.left,
+              textDirection: isContentArabic
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
             ),
             const SizedBox(height: 4),
             Text(
@@ -311,7 +320,16 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     );
   }
 
-  Widget _buildSampleQuestions() {
+  /// Checks if text contains Arabic characters
+  bool _isArabicText(String text) {
+    return text.runes.any((rune) => rune >= 0x0600 && rune <= 0x06FF);
+  }
+
+  Widget _buildSampleQuestions(AppLocalizations? tr, bool isArabic) {
+    final questions = isArabic
+        ? _geminiService.getSampleHajjQuestionsArabic()
+        : _geminiService.getSampleHajjQuestions();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -322,7 +340,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Sample Questions:',
+            tr?.sampleQuestionsLabel ?? 'Sample Questions:',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.grey.shade700,
@@ -333,12 +351,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              ..._geminiService
-                  .getSampleHajjQuestions()
-                  .take(3)
-                  .map((question) => _buildSampleQuestionChip(question)),
-            ],
+            children: questions
+                .take(3)
+                .map((q) => _buildSampleQuestionChip(q))
+                .toList(),
           ),
         ],
       ),
@@ -356,7 +372,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     );
   }
 
-  Widget _buildInputField() {
+  Widget _buildInputField(AppLocalizations? tr) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -375,7 +391,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
             child: TextField(
               controller: _messageController,
               decoration: InputDecoration(
-                hintText: 'Ask about Hajj or Umrah...',
+                hintText: tr?.askAboutHajjUmrah ?? 'Ask about Hajj or Umrah...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide(color: Colors.grey.shade300),
@@ -389,9 +405,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                   borderSide: const BorderSide(color: Colors.green),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
+                    horizontal: 20, vertical: 12),
               ),
               maxLines: null,
               textCapitalization: TextCapitalization.sentences,

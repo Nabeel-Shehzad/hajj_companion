@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hajj_companion/core/services/settings_service.dart';
-import 'package:hajj_companion/main_mobile.dart';
+import 'package:hajj_companion/core/providers/language_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
