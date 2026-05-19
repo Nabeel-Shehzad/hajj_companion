@@ -3,19 +3,40 @@ import '../models/location_share.dart';
 
 /// Service for opening Google Maps with location data
 class MapService {
+  /// Try to launch a list of URIs in order. Returns true if any launched.
+  static Future<bool> _tryLaunchAny(List<Uri> uris) async {
+    for (final uri in uris) {
+      try {
+        final ok = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (ok) return true;
+      } catch (_) {
+        // try next
+      }
+    }
+    return false;
+  }
+
   /// Open Google Maps to show a specific location
   static Future<void> openLocation({
     required double latitude,
     required double longitude,
     String? label,
   }) async {
-    final Uri googleMapsUrl = Uri.parse(
+    final encodedLabel = label != null ? Uri.encodeComponent(label) : '';
+    final geoUri = Uri.parse(
+      label != null
+          ? 'geo:$latitude,$longitude?q=$latitude,$longitude($encodedLabel)'
+          : 'geo:$latitude,$longitude?q=$latitude,$longitude',
+    );
+    final webUri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
     );
 
-    if (await canLaunchUrl(googleMapsUrl)) {
-      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-    } else {
+    final launched = await _tryLaunchAny([geoUri, webUri]);
+    if (!launched) {
       throw Exception('Could not open Google Maps');
     }
   }
@@ -35,39 +56,33 @@ class MapService {
     required double destinationLng,
     String? destinationName,
   }) async {
-    final Uri googleMapsUrl = Uri.parse(
+    // Native Google Maps directions intent on Android
+    final nativeUri = Uri.parse(
+      'google.navigation:q=$destinationLat,$destinationLng',
+    );
+    final webUri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=$destinationLat,$destinationLng',
     );
 
-    if (await canLaunchUrl(googleMapsUrl)) {
-      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-    } else {
+    final launched = await _tryLaunchAny([nativeUri, webUri]);
+    if (!launched) {
       throw Exception('Could not open Google Maps');
     }
   }
 
   /// Open Google Maps with all family members' locations
-  /// This will center the map on the first location and add markers for others
+  /// Centers on the first location (Google Maps URL API doesn't support
+  /// multiple markers in a single static link).
   static Future<void> openAllMembersMap(List<LocationShare> locations) async {
     if (locations.isEmpty) {
       throw Exception('No locations to display');
     }
 
-    // Use the first location as the center point
     final center = locations.first;
-
-    // Create a URL with the center point
-    // Note: Google Maps URL API doesn't support multiple markers directly,
-    // so we'll just center on the first location. For multiple markers,
-    // you'd need to use the embedded Google Maps SDK or a custom implementation.
-    final Uri googleMapsUrl = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${center.latitude},${center.longitude}',
+    await openLocation(
+      latitude: center.latitude,
+      longitude: center.longitude,
+      label: center.displayName,
     );
-
-    if (await canLaunchUrl(googleMapsUrl)) {
-      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-    } else {
-      throw Exception('Could not open Google Maps');
-    }
   }
 }

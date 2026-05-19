@@ -31,6 +31,22 @@ class _FamilyMembersScreenState extends State<FamilyMembersScreen> {
   Position? _myPosition;
   Timer? _locationTimer;
   bool _isSharing = false;
+  bool _isAdmin = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadAdminStatus();
+  }
+
+  Future<void> _loadAdminStatus() async {
+    final group = await widget.groupService.getCurrentGroup();
+    if (group == null) return;
+    final myDeviceId = widget.deviceIdService.getDeviceId();
+    if (mounted) {
+      setState(() => _isAdmin = group.adminDeviceId == myDeviceId);
+    }
+  }
 
   @override
   void initState() {
@@ -324,9 +340,24 @@ class _FamilyMembersScreenState extends State<FamilyMembersScreen> {
               ],
               if (member.isChild && member.safeDistanceMeters != null) ...[
                 const SizedBox(height: 2),
-                Text(
-                  'Safe distance: ${_formatDistance(member.safeDistanceMeters!)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                InkWell(
+                  onTap: _isAdmin
+                      ? () => _showEditSafeRadiusDialog(member)
+                      : null,
+                  child: Row(
+                    children: [
+                      Text(
+                        'Safe distance: ${_formatDistance(member.safeDistanceMeters!)}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.grey),
+                      ),
+                      if (_isAdmin) ...[
+                        const SizedBox(width: 6),
+                        const Icon(Icons.edit,
+                            size: 14, color: Colors.green),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -421,6 +452,104 @@ class _FamilyMembersScreenState extends State<FamilyMembersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error opening directions: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showEditSafeRadiusDialog(FamilyMember member) async {
+    double current = member.safeDistanceMeters ?? 1000.0;
+    // clamp to slider range
+    if (current < 100) current = 100;
+    if (current > 5000) current = 5000;
+
+    final newValue = await showDialog<double>(
+      context: context,
+      builder: (context) {
+        double tempValue = current;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text('Safe radius for ${member.displayName}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  _formatDistance(tempValue).replaceAll(' away', ''),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Slider(
+                  min: 100,
+                  max: 5000,
+                  divisions: 49,
+                  value: tempValue,
+                  label: tempValue.round().toString(),
+                  activeColor: Colors.green,
+                  onChanged: (v) => setDialogState(() => tempValue = v),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: const [
+                    Text('100 m', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text('5 km', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'You will be notified when this child goes beyond this distance from you.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(context, tempValue),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (newValue == null) return;
+
+    try {
+      await widget.groupService.updateMemberSafeDistance(
+        memberDeviceId: member.deviceId,
+        distanceMeters: newValue,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Safe radius updated to ${_formatDistance(newValue).replaceAll(' away', '')}',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update safe radius: $e'),
             backgroundColor: Colors.red,
           ),
         );
